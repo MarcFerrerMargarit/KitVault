@@ -3,11 +3,28 @@ import {
   ArrowRight,
   ScanSearch,
   SlidersHorizontal,
-  Users,
-  ExternalLink,
+  Share2,
 } from "lucide-react";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/button";
+import { HeroBackdrop } from "@/components/landing/HeroBackdrop";
+import { KitMarquee } from "@/components/landing/KitMarquee";
+
+const GITHUB_URL = "https://github.com/MarcFerrerMargarit/KitVault";
+
+/** GitHub mark — lucide dropped its brand icons, so we inline the logo. */
+function GithubIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+      className={className}
+    >
+      <path d="M12 .5C5.37.5 0 5.78 0 12.29c0 5.21 3.44 9.63 8.21 11.19.6.11.82-.25.82-.56v-2.2c-3.34.71-4.04-1.58-4.04-1.58-.55-1.36-1.33-1.72-1.33-1.72-1.09-.73.08-.72.08-.72 1.2.08 1.84 1.21 1.84 1.21 1.07 1.8 2.81 1.28 3.5.98.11-.76.42-1.28.76-1.57-2.67-.3-5.47-1.31-5.47-5.82 0-1.29.47-2.34 1.23-3.16-.12-.3-.53-1.51.12-3.15 0 0 1.01-.32 3.3 1.21a11.6 11.6 0 0 1 6 0c2.29-1.53 3.3-1.21 3.3-1.21.65 1.64.24 2.85.12 3.15.77.82 1.23 1.87 1.23 3.16 0 4.52-2.81 5.51-5.49 5.81.43.36.81 1.08.81 2.18v3.23c0 .31.22.68.83.56A12.02 12.02 0 0 0 24 12.29C24 5.78 18.63.5 12 .5z" />
+    </svg>
+  );
+}
 
 const FEATURES = [
   {
@@ -21,9 +38,9 @@ const FEATURES = [
     body: "Slice your collection by country, league, season or version in real time. Find any shirt in seconds.",
   },
   {
-    icon: Users,
-    title: "Multi-user collections",
-    body: "Every collector gets their own private vault. Your shirts, your data — organised exactly how you want it.",
+    icon: Share2,
+    title: "Share your collection",
+    body: "Show off your vault. Share your collection with friends and discover the kits other collectors are hunting down.",
   },
 ];
 
@@ -51,27 +68,36 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border pitch-stripes">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-accent/10 blur-[120px]"
-        />
+        <HeroBackdrop />
         <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-24 text-center sm:px-6 sm:py-32">
-          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface px-3 py-1 text-xs font-medium text-muted">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-            A monthly shirt, a growing collection
+          <span
+            className="reveal mb-6 inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface/80 px-3 py-1 text-xs font-medium text-muted backdrop-blur-sm"
+            style={{ animationDelay: "0ms" }}
+          >
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+            Collect &middot; Organize &middot; Share
           </span>
-          <h1 className="font-display text-5xl font-bold uppercase leading-[0.95] tracking-tight text-white sm:text-7xl">
+          <h1
+            className="reveal font-display text-5xl font-bold uppercase leading-[0.95] tracking-tight text-white sm:text-7xl"
+            style={{ animationDelay: "90ms" }}
+          >
             Your football shirt
             <br />
             collection,{" "}
             <span className="text-accent">finally organized</span>
           </h1>
-          <p className="mt-6 max-w-2xl text-base text-muted sm:text-lg">
-            KitVault is the home for your kits. Photograph a shirt, let AI
-            identify it, and build a beautifully organised archive of every
-            jersey you own.
+          <p
+            className="reveal mt-6 max-w-2xl text-base text-muted sm:text-lg"
+            style={{ animationDelay: "180ms" }}
+          >
+            KitVault is the home for your kits. Catalogue every shirt with AI,
+            keep your archive perfectly organised, and share your collection
+            with fellow collectors around the world.
           </p>
-          <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row">
+          <div
+            className="reveal mt-9 flex flex-col items-center gap-3 sm:flex-row"
+            style={{ animationDelay: "280ms" }}
+          >
             <Link href="/collection">
               <Button size="lg">
                 Get started free
@@ -85,6 +111,14 @@ export default function LandingPage() {
             </Link>
           </div>
         </div>
+
+        {/* Kit wall */}
+        <div
+          className="reveal relative border-t border-border bg-bg/40 py-6"
+          style={{ animationDelay: "380ms" }}
+        >
+          <KitMarquee />
+        </div>
       </section>
 
       {/* Features */}
@@ -94,7 +128,8 @@ export default function LandingPage() {
             Built for collectors
           </h2>
           <p className="mt-3 text-muted">
-            Everything you need to catalogue a serious shirt collection.
+            Everything you need to catalogue — and show off — a serious shirt
+            collection.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
@@ -148,11 +183,13 @@ export default function LandingPage() {
             shirt collectors.
           </p>
           <a
-            href="#"
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-ink"
           >
-            <ExternalLink className="h-4 w-4" />
-            GitHub
+            <GithubIcon className="h-4 w-4" />
+            View on GitHub
           </a>
         </div>
       </footer>

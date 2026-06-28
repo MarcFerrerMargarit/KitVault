@@ -112,3 +112,103 @@ body {
 .animate-overlay-in {
   animation: kv-overlay-in 0.15s ease-out;
 }
+
+/* ------------------------------------------------------------------ */
+/* Landing — football effects                                          */
+/* ------------------------------------------------------------------ */
+
+/* Staggered entrance for hero content */
+@keyframes kv-rise {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.reveal {
+  opacity: 0;
+  animation: kv-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+/* Stadium-light glow that slowly breathes */
+@keyframes kv-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateX(-50%) scale(1.12);
+  }
+}
+.animate-glow {
+  animation: kv-glow 6s ease-in-out infinite;
+}
+
+/* Floating shirt silhouettes drifting behind the hero */
+@keyframes kv-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--rot, 0deg));
+  }
+  50% {
+    transform: translateY(-22px) rotate(var(--rot, 0deg));
+  }
+}
+.animate-float {
+  animation: kv-float var(--dur, 7s) ease-in-out infinite;
+}
+
+/* Slowly rotating centre circle on the pitch */
+@keyframes kv-spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: kv-spin-slow 80s linear infinite;
+  transform-origin: center;
+}
+
+/* Kit-wall marquee */
+@keyframes kv-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes kv-marquee-reverse {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.animate-marquee {
+  animation: kv-marquee var(--dur, 40s) linear infinite;
+}
+.animate-marquee-reverse {
+  animation: kv-marquee-reverse var(--dur, 50s) linear infinite;
+}
+
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .animate-glow,
+  .animate-float,
+  .animate-spin-slow,
+  .animate-marquee,
+  .animate-marquee-reverse {
+    animation: none;
+  }
+  .reveal {
+    opacity: 1;
+  }
+}
