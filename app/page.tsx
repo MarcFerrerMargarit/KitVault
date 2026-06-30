@@ -52,12 +52,12 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Brand />
           <nav className="flex items-center gap-2">
-            <Link href="/collection">
+            <Link href="/login">
               <Button variant="ghost" size="sm">
                 Login
               </Button>
             </Link>
-            <Link href="/collection">
+            <Link href="/signup">
               <Button variant="primary" size="sm">
                 Sign up
               </Button>
@@ -98,15 +98,15 @@ export default function LandingPage() {
             className="reveal mt-9 flex flex-col items-center gap-3 sm:flex-row"
             style={{ animationDelay: "280ms" }}
           >
-            <Link href="/collection">
+            <Link href="/signup">
               <Button size="lg">
                 Get started free
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </Link>
-            <Link href="/collection">
+            <Link href="/login">
               <Button size="lg" variant="outline">
-                View demo collection
+                Log in
               </Button>
             </Link>
           </div>
@@ -165,7 +165,7 @@ export default function LandingPage() {
           <p className="max-w-xl text-muted">
             Free to start. Add your first shirt in under a minute.
           </p>
-          <Link href="/collection">
+          <Link href="/signup">
             <Button size="lg">
               Get started free
               <ArrowRight className="h-5 w-5" />

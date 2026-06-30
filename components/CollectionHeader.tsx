@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { LogOut, Settings, User } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { Brand } from "@/components/Brand";
 import { Avatar } from "@/components/ui/avatar";
 import {
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface CollectionHeaderProps {
-  /** Email shown in the account menu (mock). */
+  /** Email of the signed-in user. */
   email: string;
 }
 
@@ -19,6 +20,13 @@ interface CollectionHeaderProps {
 export function CollectionHeader({ email }: CollectionHeaderProps) {
   const router = useRouter();
   const initials = email.slice(0, 2).toUpperCase();
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur-md">
@@ -39,7 +47,7 @@ export function CollectionHeader({ email }: CollectionHeaderProps) {
             <Settings className="h-4 w-4" />
             Settings
           </DropdownMenuItem>
-          <DropdownMenuItem destructive onClick={() => router.push("/")}>
+          <DropdownMenuItem destructive onClick={handleSignOut}>
             <LogOut className="h-4 w-4" />
             Log out
           </DropdownMenuItem>
