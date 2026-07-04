@@ -7,7 +7,7 @@ import type {
   ShirtFilters,
   ShirtVersion,
 } from "@/lib/types";
-import { COUNTRIES, LEAGUES, SEASONS, VERSIONS } from "@/lib/mock-data";
+import { COUNTRIES, LEAGUES, VERSIONS } from "@/lib/mock-data";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ interface FilterBarProps {
   onChange: (patch: Partial<ShirtFilters>) => void;
   onReset: () => void;
   hasActiveFilters: boolean;
+  /** Seasons present in the current collection, for the season dropdown. */
+  seasons: string[];
 }
 
 /** Real-time, client-side filter controls for the collection. */
@@ -25,6 +27,7 @@ export function FilterBar({
   onChange,
   onReset,
   hasActiveFilters,
+  seasons,
 }: FilterBarProps) {
   return (
     <div className="rounded-[var(--radius)] border border-border bg-surface p-3 sm:p-4">
@@ -79,7 +82,7 @@ export function FilterBar({
             onChange={(e) => onChange({ season: e.target.value })}
           >
             <option value="all">All seasons</option>
-            {SEASONS.map((s) => (
+            {seasons.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
