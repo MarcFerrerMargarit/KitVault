@@ -20,6 +20,25 @@ export default async function CollectionPage() {
 
   const shirts = ((data as ShirtRow[] | null) ?? []).map(rowToShirt);
 
+  // Resolve signed URLs for shirts that have an uploaded photo (private bucket).
+  const paths = shirts
+    .map((s) => s.imagePath)
+    .filter((p): p is string => Boolean(p));
+
+  if (paths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from("shirts")
+      .createSignedUrls(paths, 60 * 60); // 1 hour
+    const urlByPath = new Map(
+      (signed ?? []).map((s) => [s.path, s.signedUrl]),
+    );
+    for (const shirt of shirts) {
+      if (shirt.imagePath) {
+        shirt.imageUrl = urlByPath.get(shirt.imagePath) ?? undefined;
+      }
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <CollectionHeader email={user.email ?? "account"} />

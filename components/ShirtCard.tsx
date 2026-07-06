@@ -30,16 +30,27 @@ export function ShirtCard({ shirt, onView }: ShirtCardProps) {
 
       {/* Image / placeholder */}
       <div className="relative aspect-[4/5] w-full overflow-hidden">
-        <div
-          className="absolute inset-0 transition-transform duration-300 group-hover:scale-105"
-          style={{ background: placeholderGradient(shirt) }}
-        />
-        {/* darkening for legibility + faint shirt glyph */}
+        {shirt.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={shirt.imageUrl}
+            alt={`${shirt.team} ${shirt.season} ${shirt.version}`}
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <>
+            <div
+              className="absolute inset-0 transition-transform duration-300 group-hover:scale-105"
+              style={{ background: placeholderGradient(shirt) }}
+            />
+            <ShirtIcon
+              className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 text-white/15"
+              strokeWidth={1}
+            />
+          </>
+        )}
+        {/* darkening for legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-black/20" />
-        <ShirtIcon
-          className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 text-white/15"
-          strokeWidth={1}
-        />
 
         {/* Manufacturer badge */}
         <div className="absolute right-2 top-2">

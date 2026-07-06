@@ -70,15 +70,26 @@ export function ShirtDetailModal({
             className="absolute left-0 top-0 z-10 h-full w-2"
             style={{ backgroundColor: shirt.teamColor }}
           />
-          <div
-            className="absolute inset-0"
-            style={{ background: placeholderGradient(shirt) }}
-          />
+          {shirt.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={shirt.imageUrl}
+              alt={`${shirt.team} ${shirt.season} ${shirt.version}`}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <>
+              <div
+                className="absolute inset-0"
+                style={{ background: placeholderGradient(shirt) }}
+              />
+              <ShirtIcon
+                className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 text-white/20"
+                strokeWidth={1}
+              />
+            </>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-black/10" />
-          <ShirtIcon
-            className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 text-white/20"
-            strokeWidth={1}
-          />
           <span
             className={cn(
               "absolute bottom-3 left-4 inline-flex items-center rounded-[3px] border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide leading-none backdrop-blur-sm",

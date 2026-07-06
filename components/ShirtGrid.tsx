@@ -12,7 +12,7 @@ import {
 import { StatsBar } from "@/components/StatsBar";
 import { FilterBar } from "@/components/FilterBar";
 import { ShirtCard } from "@/components/ShirtCard";
-import { AddShirtModal } from "@/components/AddShirtModal";
+import { AddShirtModal, type SaveMeta } from "@/components/AddShirtModal";
 import { ShirtDetailModal } from "@/components/ShirtDetailModal";
 import { Button } from "@/components/ui/button";
 
@@ -129,9 +129,10 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
     });
   };
 
-  const handleSave = (data: ShirtFormData, id?: string) => {
+  const handleSave = (data: ShirtFormData, meta: SaveMeta) => {
     setError(null);
-    if (id) {
+    if (meta.id) {
+      const id = meta.id;
       // Optimistic edit
       setShirts((prev) =>
         prev.map((s) =>
@@ -139,6 +140,7 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
             ? {
                 ...s,
                 ...data,
+                imageUrl: meta.previewUrl ?? s.imageUrl,
                 ai: {
                   ...s.ai,
                   label: `${data.team} ${data.version} ${data.season}`,
@@ -148,7 +150,7 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
         ),
       );
       startTransition(async () => {
-        const res = await updateShirt(id, data);
+        const res = await updateShirt(id, data, meta.imagePath);
         if (res.error) setError(res.error);
         router.refresh();
       });
@@ -160,6 +162,8 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
         id: `temp-${Date.now()}`,
         ...data,
         teamColor: color,
+        imagePath: meta.imagePath ?? undefined,
+        imageUrl: meta.previewUrl,
         ai: {
           label: `${data.team} ${data.version} ${data.season}`,
           confidence: 80,
@@ -168,7 +172,7 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
       };
       setShirts((prev) => [tempShirt, ...prev]);
       startTransition(async () => {
-        const res = await createShirt(data, color);
+        const res = await createShirt(data, color, meta.imagePath);
         if (res.error) setError(res.error);
         router.refresh();
       });

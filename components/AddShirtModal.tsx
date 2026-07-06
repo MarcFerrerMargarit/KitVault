@@ -5,8 +5,8 @@ import {
   UploadCloud,
   Sparkles,
   Loader2,
-  ImageIcon,
   Info,
+  ImagePlus,
 } from "lucide-react";
 import type { Shirt, ShirtFormData } from "@/lib/types";
 import {
@@ -16,6 +16,7 @@ import {
   MOCK_AI_SUGGESTIONS,
   VERSIONS,
 } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogFooter,
@@ -31,11 +32,19 @@ import { Label } from "@/components/ui/label";
 
 type Step = "upload" | "analyzing" | "form";
 
+/** Extra info passed alongside the form data when saving. */
+export interface SaveMeta {
+  id?: string;
+  /** New storage path when a photo was uploaded; `undefined` = leave unchanged. */
+  imagePath?: string | null;
+  /** URL to show immediately (optimistic). */
+  previewUrl?: string;
+}
+
 interface AddShirtModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Called on save. `id` is present when editing an existing shirt. */
-  onSave: (data: ShirtFormData, id?: string) => void;
+  onSave: (data: ShirtFormData, meta: SaveMeta) => void;
   /** When set, the modal opens straight to the form in edit mode. */
   editingShirt?: Shirt | null;
 }
@@ -62,13 +71,22 @@ export function AddShirtModal({
   const [aiConfidence, setAiConfidence] = React.useState<number | null>(null);
   const [dragging, setDragging] = React.useState(false);
 
-  // Reset the flow whenever the modal transitions to open. Adjusting state
-  // during render (rather than in an effect) is React's recommended pattern
-  // for resetting state in response to a prop change.
+  const [file, setFile] = React.useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Reset the flow whenever the modal transitions to open.
   const [wasOpen, setWasOpen] = React.useState(false);
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
+      setFile(null);
+      setPreviewUrl(null);
+      setSaving(false);
+      setError(null);
       if (editingShirt) {
         setStep("form");
         setAiConfidence(editingShirt.ai.confidence);
@@ -92,7 +110,7 @@ export function AddShirtModal({
   // Simulate the AI analysis: 2s spinner, then a random pre-filled suggestion.
   const startAnalysis = React.useCallback(() => {
     setStep("analyzing");
-    const timer = setTimeout(() => {
+    setTimeout(() => {
       const pick =
         MOCK_AI_SUGGESTIONS[
           Math.floor(Math.random() * MOCK_AI_SUGGESTIONS.length)
@@ -109,27 +127,71 @@ export function AddShirtModal({
       setAiConfidence(pick.confidence);
       setStep("form");
     }, 2000);
-    return () => clearTimeout(timer);
   }, []);
+
+  const selectFile = (picked: File | undefined) => {
+    if (!picked || !picked.type.startsWith("image/")) return;
+    setPreviewUrl((prev) => {
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(picked);
+    });
+    setFile(picked);
+    // In the upload step, picking a photo kicks off the mock analysis.
+    if (!isEditing && step === "upload") startAnalysis();
+  };
 
   const update = <K extends keyof ShirtFormData>(
     key: K,
     value: ShirtFormData[K],
   ) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.team.trim() || !form.season.trim()) return;
-    onSave(form, editingShirt?.id);
+
+    setSaving(true);
+    setError(null);
+
+    let uploadedPath: string | null | undefined = undefined;
+
+    // Upload a newly selected photo to the private `shirts` bucket.
+    if (file) {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setError("You are not signed in.");
+        setSaving(false);
+        return;
+      }
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("shirts")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (upErr) {
+        setError(`Photo upload failed: ${upErr.message}`);
+        setSaving(false);
+        return;
+      }
+      uploadedPath = path;
+    }
+
+    onSave(form, {
+      id: editingShirt?.id,
+      imagePath: uploadedPath,
+      previewUrl: previewUrl ?? editingShirt?.imageUrl,
+    });
     onOpenChange(false);
   };
+
+  const shownImage = previewUrl ?? editingShirt?.imageUrl ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} className="max-w-xl">
       <DialogHeader>
-        <DialogTitle>
-          {isEditing ? "Edit shirt" : "Add new shirt"}
-        </DialogTitle>
+        <DialogTitle>{isEditing ? "Edit shirt" : "Add new shirt"}</DialogTitle>
         <DialogDescription>
           {step === "form"
             ? "Review the details and save to your collection."
@@ -137,15 +199,26 @@ export function AddShirtModal({
         </DialogDescription>
       </DialogHeader>
 
+      {/* Hidden native file input, shared by all steps. */}
+      <input
+        ref={fileInputRef}
+        id="photo-input"
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => selectFile(e.target.files?.[0])}
+      />
+
       {/* Step 1 — Upload */}
       {step === "upload" && (
         <div className="p-6">
           <div
             role="button"
             tabIndex={0}
-            onClick={startAnalysis}
+            onClick={() => fileInputRef.current?.click()}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") startAnalysis();
+              if (e.key === "Enter" || e.key === " ")
+                fileInputRef.current?.click();
             }}
             onDragOver={(e) => {
               e.preventDefault();
@@ -155,7 +228,7 @@ export function AddShirtModal({
             onDrop={(e) => {
               e.preventDefault();
               setDragging(false);
-              startAnalysis();
+              selectFile(e.dataTransfer.files?.[0]);
             }}
             className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[var(--radius)] border-2 border-dashed px-6 py-14 text-center transition-colors ${
               dragging
@@ -176,18 +249,26 @@ export function AddShirtModal({
             </div>
           </div>
           <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-2">
-            <ImageIcon className="h-3.5 w-3.5" />
-            This is a prototype — any drop or click triggers a mock analysis.
+            <Sparkles className="h-3.5 w-3.5" />
+            AI identification is mocked for now — real analysis lands in Phase 3.
           </p>
         </div>
       )}
 
       {/* Step 2 — Analyzing */}
       {step === "analyzing" && (
-        <div className="flex flex-col items-center justify-center gap-4 px-6 py-20 text-center">
+        <div className="flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
+          {previewUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={previewUrl}
+              alt="Selected shirt"
+              className="h-28 w-28 rounded-[var(--radius)] object-cover opacity-80"
+            />
+          )}
           <div className="relative">
-            <Loader2 className="h-12 w-12 animate-spin text-accent" />
-            <Sparkles className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 text-accent" />
+            <Loader2 className="h-10 w-10 animate-spin text-accent" />
+            <Sparkles className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-accent" />
           </div>
           <div>
             <p className="font-display text-lg font-bold uppercase tracking-wide text-white">
@@ -204,6 +285,38 @@ export function AddShirtModal({
       {step === "form" && (
         <form onSubmit={handleSubmit}>
           <div className="max-h-[60vh] space-y-4 overflow-y-auto p-6">
+            {/* Photo preview + change */}
+            <div className="flex items-center gap-4">
+              <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-[var(--radius)] border border-border bg-surface-2">
+                {shownImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={shownImage}
+                    alt="Shirt"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-muted-2">
+                    <ImagePlus className="h-6 w-6" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <ImagePlus className="h-4 w-4" />
+                  {shownImage ? "Change photo" : "Add photo"}
+                </Button>
+                <p className="mt-1.5 text-xs text-muted-2">
+                  PNG or JPG, up to 10MB.
+                </p>
+              </div>
+            </div>
+
             <div>
               <Label htmlFor="team">Team name</Label>
               <Input
@@ -317,6 +430,12 @@ export function AddShirtModal({
                 identifications.
               </p>
             )}
+
+            {error && (
+              <p className="rounded-[var(--radius)] border border-danger/40 bg-danger-soft px-3 py-2 text-sm text-danger">
+                {error}
+              </p>
+            )}
           </div>
 
           <DialogFooter>
@@ -324,10 +443,12 @@ export function AddShirtModal({
               type="button"
               variant="ghost"
               onClick={() => onOpenChange(false)}
+              disabled={saving}
             >
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {isEditing ? "Save changes" : "Save to collection"}
             </Button>
           </DialogFooter>

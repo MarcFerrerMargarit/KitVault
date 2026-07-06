@@ -39,6 +39,7 @@ export function rowToShirt(row: ShirtRow): Shirt {
     teamColor: row.team_color ?? "#4ade80",
     secondaryColor: row.secondary_color ?? undefined,
     notes: row.notes ?? undefined,
+    imagePath: row.image_path ?? undefined,
     ai: {
       label: row.ai_label ?? `${row.team} ${row.version} ${row.season}`,
       confidence: row.ai_confidence ?? 0,

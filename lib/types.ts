@@ -43,6 +43,10 @@ export interface Shirt {
   /** Optional secondary color for the placeholder gradient. Hex. */
   secondaryColor?: string;
   notes?: string;
+  /** Storage path in the `shirts` bucket, if a photo was uploaded. */
+  imagePath?: string;
+  /** Resolved (signed) URL for display. Not persisted in the DB. */
+  imageUrl?: string;
   /** Mock AI identification metadata. */
   ai: {
     label: string; // e.g. "FC Barcelona Home 2019-20"

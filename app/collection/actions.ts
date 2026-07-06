@@ -12,6 +12,7 @@ export interface ActionResult {
 export async function createShirt(
   data: ShirtFormData,
   teamColor: string,
+  imagePath?: string | null,
 ): Promise<ActionResult> {
   const supabase = await createClient();
   const {
@@ -29,6 +30,7 @@ export async function createShirt(
     manufacturer: data.manufacturer,
     notes: data.notes.trim() || null,
     team_color: teamColor,
+    image_path: imagePath ?? null,
     ai_label: `${data.team} ${data.version} ${data.season}`,
     ai_confidence: 80,
   });
@@ -42,6 +44,7 @@ export async function createShirt(
 export async function updateShirt(
   id: string,
   data: ShirtFormData,
+  imagePath?: string | null,
 ): Promise<ActionResult> {
   const supabase = await createClient();
   const {
@@ -49,19 +52,20 @@ export async function updateShirt(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You are not signed in." };
 
-  const { error } = await supabase
-    .from("shirts")
-    .update({
-      team: data.team.trim(),
-      season: data.season.trim(),
-      version: data.version,
-      country: data.country,
-      league: data.league,
-      manufacturer: data.manufacturer,
-      notes: data.notes.trim() || null,
-      ai_label: `${data.team} ${data.version} ${data.season}`,
-    })
-    .eq("id", id);
+  const patch: Record<string, unknown> = {
+    team: data.team.trim(),
+    season: data.season.trim(),
+    version: data.version,
+    country: data.country,
+    league: data.league,
+    manufacturer: data.manufacturer,
+    notes: data.notes.trim() || null,
+    ai_label: `${data.team} ${data.version} ${data.season}`,
+  };
+  // Only touch the photo when a new one was provided.
+  if (imagePath !== undefined) patch.image_path = imagePath;
+
+  const { error } = await supabase.from("shirts").update(patch).eq("id", id);
 
   if (error) return { error: error.message };
   revalidatePath("/collection");
@@ -76,9 +80,21 @@ export async function deleteShirt(id: string): Promise<ActionResult> {
   } = await supabase.auth.getUser();
   if (!user) return { error: "You are not signed in." };
 
-  const { error } = await supabase.from("shirts").delete().eq("id", id);
+  // Look up the photo so we can remove it from storage too (best-effort).
+  const { data: row } = await supabase
+    .from("shirts")
+    .select("image_path")
+    .eq("id", id)
+    .single();
 
+  const { error } = await supabase.from("shirts").delete().eq("id", id);
   if (error) return { error: error.message };
+
+  const imagePath = (row as { image_path: string | null } | null)?.image_path;
+  if (imagePath) {
+    await supabase.storage.from("shirts").remove([imagePath]);
+  }
+
   revalidatePath("/collection");
   return {};
 }
