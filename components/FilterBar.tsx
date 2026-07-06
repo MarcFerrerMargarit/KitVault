@@ -1,13 +1,8 @@
 "use client";
 
 import { Search, X } from "lucide-react";
-import type {
-  Country,
-  League,
-  ShirtFilters,
-  ShirtVersion,
-} from "@/lib/types";
-import { COUNTRIES, LEAGUES, VERSIONS } from "@/lib/mock-data";
+import type { ShirtFilters, ShirtVersion } from "@/lib/types";
+import { VERSIONS } from "@/lib/mock-data";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -17,7 +12,9 @@ interface FilterBarProps {
   onChange: (patch: Partial<ShirtFilters>) => void;
   onReset: () => void;
   hasActiveFilters: boolean;
-  /** Seasons present in the current collection, for the season dropdown. */
+  /** Distinct values present in the collection, for the dropdowns. */
+  countries: string[];
+  leagues: string[];
   seasons: string[];
 }
 
@@ -27,6 +24,8 @@ export function FilterBar({
   onChange,
   onReset,
   hasActiveFilters,
+  countries,
+  leagues,
   seasons,
 }: FilterBarProps) {
   return (
@@ -49,12 +48,10 @@ export function FilterBar({
           <Select
             aria-label="Filter by country"
             value={filters.country}
-            onChange={(e) =>
-              onChange({ country: e.target.value as Country | "all" })
-            }
+            onChange={(e) => onChange({ country: e.target.value })}
           >
             <option value="all">All countries</option>
-            {COUNTRIES.map((c) => (
+            {countries.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -64,12 +61,10 @@ export function FilterBar({
           <Select
             aria-label="Filter by league"
             value={filters.league}
-            onChange={(e) =>
-              onChange({ league: e.target.value as League | "all" })
-            }
+            onChange={(e) => onChange({ league: e.target.value })}
           >
             <option value="all">All leagues</option>
-            {LEAGUES.map((l) => (
+            {leagues.map((l) => (
               <option key={l} value={l}>
                 {l}
               </option>

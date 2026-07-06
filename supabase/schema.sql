@@ -5,8 +5,9 @@
 -- ============================================================
 
 -- 1) Enums --------------------------------------------------------------
+-- Only the kit version is a closed set. Country, league and manufacturer are
+-- free-form text so the AI (or the user) can enter any real-world value.
 create type shirt_version as enum ('Home', 'Away', 'Third', 'GK');
-create type manufacturer  as enum ('Adidas', 'Nike', 'Puma', 'Umbro', 'Kappa', 'Other');
 
 -- 2) profiles (1 row per auth user) -------------------------------------
 create table public.profiles (
@@ -25,7 +26,7 @@ create table public.shirts (
   version          shirt_version not null default 'Home',
   country          text,
   league           text,
-  manufacturer     manufacturer not null default 'Other',
+  manufacturer     text not null default 'Other',
   team_color       text,
   secondary_color  text,
   notes            text,

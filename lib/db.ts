@@ -1,10 +1,4 @@
-import type {
-  Country,
-  League,
-  Manufacturer,
-  Shirt,
-  ShirtVersion,
-} from "./types";
+import type { Manufacturer, Shirt, ShirtVersion } from "./types";
 
 /** Shape of a row in the `shirts` table (snake_case, as stored in Postgres). */
 export interface ShirtRow {
@@ -33,9 +27,9 @@ export function rowToShirt(row: ShirtRow): Shirt {
     team: row.team,
     season: row.season,
     version: row.version,
-    country: (row.country ?? "England") as Country,
-    league: (row.league ?? "Premier League") as League,
-    manufacturer: row.manufacturer,
+    country: row.country ?? "",
+    league: row.league ?? "",
+    manufacturer: row.manufacturer ?? "Other",
     teamColor: row.team_color ?? "#4ade80",
     secondaryColor: row.secondary_color ?? undefined,
     notes: row.notes ?? undefined,

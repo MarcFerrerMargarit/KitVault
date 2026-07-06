@@ -87,7 +87,7 @@ export function ShirtCard({ shirt, onView }: ShirtCardProps) {
         </h3>
         <p className="text-sm font-medium text-accent">{shirt.season}</p>
         <p className="mt-0.5 text-xs text-muted">
-          {shirt.country} &middot; {shirt.league}
+          {[shirt.country, shirt.league].filter(Boolean).join(" · ") || "—"}
         </p>
       </div>
     </button>

@@ -3,32 +3,18 @@
  * Kept strict — no `any`.
  */
 
+/** Kit version — a small, controlled vocabulary (drives badges + filters). */
 export type ShirtVersion = "Home" | "Away" | "Third" | "GK";
 
-export type Manufacturer =
-  | "Adidas"
-  | "Nike"
-  | "Puma"
-  | "Umbro"
-  | "Kappa"
-  | "Other";
-
-export type League =
-  | "Premier League"
-  | "LaLiga"
-  | "Serie A"
-  | "Bundesliga"
-  | "Ligue 1"
-  | "Champions League"
-  | "Eredivisie";
-
-export type Country =
-  | "England"
-  | "Spain"
-  | "Italy"
-  | "Germany"
-  | "France"
-  | "Netherlands";
+/*
+ * Manufacturer, League and Country are free-form text: Gemini fills the real
+ * value and the user can edit or type anything (lower divisions, national
+ * teams, "no league", rare brands…). The exported lists below are only
+ * suggestions for the inputs.
+ */
+export type Manufacturer = string;
+export type League = string;
+export type Country = string;
 
 export interface Shirt {
   id: string;

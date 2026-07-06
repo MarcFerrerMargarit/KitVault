@@ -9,13 +9,7 @@ import {
   ImagePlus,
 } from "lucide-react";
 import type { Shirt, ShirtFormData } from "@/lib/types";
-import {
-  COUNTRIES,
-  LEAGUES,
-  MANUFACTURERS,
-  MOCK_AI_SUGGESTIONS,
-  VERSIONS,
-} from "@/lib/mock-data";
+import { COUNTRIES, LEAGUES, MANUFACTURERS, VERSIONS } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
@@ -28,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
+import { SuggestInput } from "@/components/ui/suggest-input";
 import { Label } from "@/components/ui/label";
 
 type Step = "upload" | "analyzing" | "form";
@@ -39,6 +34,8 @@ export interface SaveMeta {
   imagePath?: string | null;
   /** URL to show immediately (optimistic). */
   previewUrl?: string;
+  /** Raw AI prediction, stored to `ai_corrections` for new shirts. */
+  prediction?: Record<string, unknown> | null;
 }
 
 interface AddShirtModalProps {
@@ -75,6 +72,10 @@ export function AddShirtModal({
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [prediction, setPrediction] = React.useState<Record<
+    string,
+    unknown
+  > | null>(null);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -87,6 +88,7 @@ export function AddShirtModal({
       setPreviewUrl(null);
       setSaving(false);
       setError(null);
+      setPrediction(null);
       if (editingShirt) {
         setStep("form");
         setAiConfidence(editingShirt.ai.confidence);
@@ -107,26 +109,51 @@ export function AddShirtModal({
     }
   }
 
-  // Simulate the AI analysis: 2s spinner, then a random pre-filled suggestion.
-  const startAnalysis = React.useCallback(() => {
+  // Send the photo to Gemini and pre-fill the form with its best guess.
+  const runIdentify = React.useCallback(async (picked: File) => {
     setStep("analyzing");
-    setTimeout(() => {
-      const pick =
-        MOCK_AI_SUGGESTIONS[
-          Math.floor(Math.random() * MOCK_AI_SUGGESTIONS.length)
-        ];
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("image", picked);
+      const res = await fetch("/api/identify", { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Identification failed");
+
       setForm({
-        team: pick.team,
-        season: pick.season,
-        version: pick.version,
-        country: pick.country,
-        league: pick.league,
-        manufacturer: pick.manufacturer,
+        team: json.team || "",
+        season: json.season || "",
+        version: json.version,
+        country: json.country,
+        league: json.league,
+        manufacturer: json.manufacturer,
         notes: "",
       });
-      setAiConfidence(pick.confidence);
+      setAiConfidence(
+        typeof json.confidence === "number" ? json.confidence : null,
+      );
+      setPrediction({
+        team: json.team,
+        season: json.season,
+        version: json.version,
+        country: json.country,
+        league: json.league,
+        manufacturer: json.manufacturer,
+        confidence: json.confidence,
+      });
       setStep("form");
-    }, 2000);
+    } catch (e) {
+      // Fall back to a blank form so the user can still add the shirt manually.
+      setForm(EMPTY_FORM);
+      setAiConfidence(null);
+      setPrediction(null);
+      setError(
+        e instanceof Error
+          ? e.message
+          : "AI identification failed — enter the details manually.",
+      );
+      setStep("form");
+    }
   }, []);
 
   const selectFile = (picked: File | undefined) => {
@@ -136,8 +163,8 @@ export function AddShirtModal({
       return URL.createObjectURL(picked);
     });
     setFile(picked);
-    // In the upload step, picking a photo kicks off the mock analysis.
-    if (!isEditing && step === "upload") startAnalysis();
+    // In the upload step, picking a photo kicks off AI identification.
+    if (!isEditing && step === "upload") runIdentify(picked);
   };
 
   const update = <K extends keyof ShirtFormData>(
@@ -182,6 +209,7 @@ export function AddShirtModal({
       id: editingShirt?.id,
       imagePath: uploadedPath,
       previewUrl: previewUrl ?? editingShirt?.imageUrl,
+      prediction: editingShirt ? undefined : prediction,
     });
     onOpenChange(false);
   };
@@ -360,56 +388,35 @@ export function AddShirtModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="country">Country</Label>
-                <Select
+                <SuggestInput
                   id="country"
+                  options={COUNTRIES}
                   value={form.country}
-                  onChange={(e) =>
-                    update("country", e.target.value as ShirtFormData["country"])
-                  }
-                >
-                  {COUNTRIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </Select>
+                  onChange={(e) => update("country", e.target.value)}
+                  placeholder="e.g. Spain"
+                />
               </div>
               <div>
                 <Label htmlFor="league">League</Label>
-                <Select
+                <SuggestInput
                   id="league"
+                  options={LEAGUES}
                   value={form.league}
-                  onChange={(e) =>
-                    update("league", e.target.value as ShirtFormData["league"])
-                  }
-                >
-                  {LEAGUES.map((l) => (
-                    <option key={l} value={l}>
-                      {l}
-                    </option>
-                  ))}
-                </Select>
+                  onChange={(e) => update("league", e.target.value)}
+                  placeholder="e.g. LaLiga (empty if none)"
+                />
               </div>
             </div>
 
             <div>
               <Label htmlFor="manufacturer">Manufacturer</Label>
-              <Select
+              <SuggestInput
                 id="manufacturer"
+                options={MANUFACTURERS}
                 value={form.manufacturer}
-                onChange={(e) =>
-                  update(
-                    "manufacturer",
-                    e.target.value as ShirtFormData["manufacturer"],
-                  )
-                }
-              >
-                {MANUFACTURERS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </Select>
+                onChange={(e) => update("manufacturer", e.target.value)}
+                placeholder="e.g. Nike"
+              />
             </div>
 
             <div>

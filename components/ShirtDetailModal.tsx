@@ -110,12 +110,12 @@ export function ShirtDetailModal({
           <div className="mt-4">
             <MetaRow icon={Calendar} label="Season" value={shirt.season} />
             <MetaRow icon={Tag} label="Version" value={shirt.version} />
-            <MetaRow icon={MapPin} label="Country" value={shirt.country} />
-            <MetaRow icon={Trophy} label="League" value={shirt.league} />
+            <MetaRow icon={MapPin} label="Country" value={shirt.country || "—"} />
+            <MetaRow icon={Trophy} label="League" value={shirt.league || "—"} />
             <MetaRow
               icon={Tag}
               label="Manufacturer"
-              value={shirt.manufacturer}
+              value={shirt.manufacturer || "—"}
             />
           </div>
 

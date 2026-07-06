@@ -13,6 +13,7 @@ export async function createShirt(
   data: ShirtFormData,
   teamColor: string,
   imagePath?: string | null,
+  prediction?: Record<string, unknown> | null,
 ): Promise<ActionResult> {
   const supabase = await createClient();
   const {
@@ -20,22 +21,50 @@ export async function createShirt(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You are not signed in." };
 
-  const { error } = await supabase.from("shirts").insert({
-    user_id: user.id,
-    team: data.team.trim(),
-    season: data.season.trim(),
-    version: data.version,
-    country: data.country,
-    league: data.league,
-    manufacturer: data.manufacturer,
-    notes: data.notes.trim() || null,
-    team_color: teamColor,
-    image_path: imagePath ?? null,
-    ai_label: `${data.team} ${data.version} ${data.season}`,
-    ai_confidence: 80,
-  });
+  const confidence =
+    prediction && typeof prediction.confidence === "number"
+      ? prediction.confidence
+      : 80;
+
+  const { data: inserted, error } = await supabase
+    .from("shirts")
+    .insert({
+      user_id: user.id,
+      team: data.team.trim(),
+      season: data.season.trim(),
+      version: data.version,
+      country: data.country,
+      league: data.league,
+      manufacturer: data.manufacturer,
+      notes: data.notes.trim() || null,
+      team_color: teamColor,
+      image_path: imagePath ?? null,
+      ai_label: `${data.team} ${data.version} ${data.season}`,
+      ai_confidence: confidence,
+    })
+    .select("id")
+    .single();
 
   if (error) return { error: error.message };
+
+  // Record the AI prediction vs. what the user actually saved (Phase 5 data).
+  if (prediction && inserted) {
+    await supabase.from("ai_corrections").insert({
+      shirt_id: (inserted as { id: string }).id,
+      user_id: user.id,
+      image_path: imagePath ?? null,
+      predicted: prediction,
+      corrected: {
+        team: data.team.trim(),
+        season: data.season.trim(),
+        version: data.version,
+        country: data.country,
+        league: data.league,
+        manufacturer: data.manufacturer,
+      },
+    });
+  }
+
   revalidatePath("/collection");
   return {};
 }

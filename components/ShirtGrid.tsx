@@ -65,12 +65,22 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
   const [addOpen, setAddOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Shirt | null>(null);
 
-  // Seasons available in the collection, newest first — drives the dropdown.
+  // Distinct values present in the collection, driving the filter dropdowns.
   const seasons = React.useMemo(
     () =>
       Array.from(new Set(shirts.map((s) => s.season))).sort((a, b) =>
         b.localeCompare(a),
       ),
+    [shirts],
+  );
+  const countries = React.useMemo(
+    () =>
+      Array.from(new Set(shirts.map((s) => s.country).filter(Boolean))).sort(),
+    [shirts],
+  );
+  const leagues = React.useMemo(
+    () =>
+      Array.from(new Set(shirts.map((s) => s.league).filter(Boolean))).sort(),
     [shirts],
   );
 
@@ -172,7 +182,12 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
       };
       setShirts((prev) => [tempShirt, ...prev]);
       startTransition(async () => {
-        const res = await createShirt(data, color, meta.imagePath);
+        const res = await createShirt(
+          data,
+          color,
+          meta.imagePath,
+          meta.prediction,
+        );
         if (res.error) setError(res.error);
         router.refresh();
       });
@@ -218,6 +233,8 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
           onChange={patchFilters}
           onReset={() => setFilters(DEFAULT_FILTERS)}
           hasActiveFilters={hasActiveFilters}
+          countries={countries}
+          leagues={leagues}
           seasons={seasons}
         />
       )}

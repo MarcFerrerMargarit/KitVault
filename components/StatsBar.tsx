@@ -13,8 +13,8 @@ interface Stat {
 
 /** Derives headline numbers from the whole collection. */
 export function StatsBar({ shirts }: StatsBarProps) {
-  const countries = new Set(shirts.map((s) => s.country)).size;
-  const leagues = new Set(shirts.map((s) => s.league)).size;
+  const countries = new Set(shirts.map((s) => s.country).filter(Boolean)).size;
+  const leagues = new Set(shirts.map((s) => s.league).filter(Boolean)).size;
 
   const latest = [...shirts].sort(
     (a, b) => +new Date(b.addedAt) - +new Date(a.addedAt),
