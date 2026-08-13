@@ -1,11 +1,25 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
+import {
+  fetchQuota,
+  quotaDenialMessage,
+  type QuotaDenialReason,
+} from "@/lib/quota";
 import { VERSIONS } from "@/lib/mock-data";
 
 // Cheap, fast, vision-capable model with structured output.
 const MODEL = "gemini-2.5-flash";
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
+
+/** Row returned by the `consume_ai_credit()` Postgres function. */
+interface CreditRow {
+  allowed: boolean;
+  reason: string;
+  usage_id: string | null;
+  remaining: number;
+  resets_at: string;
+}
 
 /**
  * POST /api/identify
@@ -38,6 +52,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Image too large" }, { status: 400 });
   }
 
+  // Everything above is free to reject. From here on the request costs money,
+  // so claim a credit first: this enforces the app-wide daily cap, the
+  // per-minute burst guard and the user's plan quota in a single statement.
+  const { data: credit, error: creditError } = await supabase
+    .rpc("consume_ai_credit", { p_model: MODEL })
+    .single<CreditRow>();
+
+  if (creditError || !credit) {
+    console.error("[identify] quota check failed:", creditError?.message);
+    return NextResponse.json(
+      { error: "Could not check your AI quota. Please try again." },
+      { status: 500 },
+    );
+  }
+
+  if (!credit.allowed) {
+    const quota = await fetchQuota(supabase);
+    const reason = credit.reason as QuotaDenialReason;
+    return NextResponse.json(
+      { error: quotaDenialMessage(reason, quota), reason, quota },
+      {
+        status: 429,
+        headers: reason === "burst" ? { "Retry-After": "60" } : {},
+      },
+    );
+  }
+
+  const usageId = credit.usage_id;
   const base64 = Buffer.from(await image.arrayBuffer()).toString("base64");
 
   const prompt = `You are an expert in identifying football (soccer) shirts.
@@ -74,6 +116,9 @@ fixed list. If unsure, still provide your best estimate.`;
       ],
       config: {
         temperature: 0.2,
+        // Thinking tokens bill as output ($2.50/1M) and buy nothing here: the
+        // answer is constrained by the schema below. Off = cheaper + faster.
+        thinkingConfig: { thinkingBudget: 0 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -102,6 +147,7 @@ fixed list. If unsure, still provide your best estimate.`;
 
     const text = result.text;
     if (!text) {
+      await releaseCredit(supabase, usageId);
       return NextResponse.json(
         { error: "Empty response from the model" },
         { status: 502 },
@@ -111,12 +157,23 @@ fixed list. If unsure, still provide your best estimate.`;
     const parsed = JSON.parse(text) as Record<string, unknown>;
     const usage = result.usageMetadata;
 
-    // Log token usage so we can gauge cost per identification.
+    // Settle the reservation with the real token counts — `ai_usage` doubles
+    // as the cost ledger, so this is what we bill and budget against.
+    if (usageId) {
+      await supabase.rpc("record_ai_usage", {
+        p_usage_id: usageId,
+        p_input: usage?.promptTokenCount ?? null,
+        p_output: usage?.candidatesTokenCount ?? null,
+        p_total: usage?.totalTokenCount ?? null,
+      });
+    }
+
     console.log(
       `[identify] model=${MODEL} tokens in=${usage?.promptTokenCount ?? "?"} out=${usage?.candidatesTokenCount ?? "?"} total=${usage?.totalTokenCount ?? "?"}`,
     );
 
     return NextResponse.json({
+      quota: await fetchQuota(supabase),
       team: String(parsed.team ?? "").trim(),
       season: String(parsed.season ?? "").trim(),
       version: VERSIONS.includes(parsed.version as (typeof VERSIONS)[number])
@@ -136,6 +193,9 @@ fixed list. If unsure, still provide your best estimate.`;
       },
     });
   } catch (err) {
+    // Hand the credit back — a failed call costs nothing, so it should not
+    // count against the user's daily allowance.
+    await releaseCredit(supabase, usageId);
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[identify] error:", message);
     return NextResponse.json(
@@ -143,4 +203,16 @@ fixed list. If unsure, still provide your best estimate.`;
       { status: 502 },
     );
   }
+}
+
+/** Best-effort refund of a reserved credit; never throws. */
+async function releaseCredit(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  usageId: string | null,
+) {
+  if (!usageId) return;
+  const { error } = await supabase.rpc("release_ai_credit", {
+    p_usage_id: usageId,
+  });
+  if (error) console.error("[identify] credit release failed:", error.message);
 }

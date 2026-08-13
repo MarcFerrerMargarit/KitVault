@@ -60,4 +60,10 @@ export interface ShirtFilters {
   league: League | "all";
   season: string | "all";
   version: ShirtVersion | "all";
+  /**
+   * Set by clicking a country on the map. It is a list because one shape can
+   * cover several footballing countries — England, Scotland and Wales all live
+   * on the United Kingdom outline. `null` means "not filtering by map".
+   */
+  countryIn: { label: string; values: Country[] } | null;
 }

@@ -1,16 +1,11 @@
 "use client";
 
 import * as React from "react";
-import {
-  UploadCloud,
-  Sparkles,
-  Loader2,
-  Info,
-  ImagePlus,
-} from "lucide-react";
+import { UploadCloud, Sparkles, Loader2, Info, ImagePlus } from "lucide-react";
 import type { Shirt, ShirtFormData } from "@/lib/types";
 import { COUNTRIES, LEAGUES, MANUFACTURERS, VERSIONS } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/client";
+import { useQuota } from "@/components/QuotaProvider";
 import {
   Dialog,
   DialogFooter,
@@ -63,6 +58,9 @@ export function AddShirtModal({
   editingShirt,
 }: AddShirtModalProps) {
   const isEditing = Boolean(editingShirt);
+  const { quota, setQuota } = useQuota();
+  // `null` quota = unknown (migration not run); don't block the user on it.
+  const outOfCredit = quota !== null && quota.remaining <= 0;
   const [step, setStep] = React.useState<Step>("upload");
   const [form, setForm] = React.useState<ShirtFormData>(EMPTY_FORM);
   const [aiConfidence, setAiConfidence] = React.useState<number | null>(null);
@@ -110,51 +108,57 @@ export function AddShirtModal({
   }
 
   // Send the photo to Gemini and pre-fill the form with its best guess.
-  const runIdentify = React.useCallback(async (picked: File) => {
-    setStep("analyzing");
-    setError(null);
-    try {
-      const fd = new FormData();
-      fd.append("image", picked);
-      const res = await fetch("/api/identify", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Identification failed");
+  const runIdentify = React.useCallback(
+    async (picked: File) => {
+      setStep("analyzing");
+      setError(null);
+      try {
+        const fd = new FormData();
+        fd.append("image", picked);
+        const res = await fetch("/api/identify", { method: "POST", body: fd });
+        const json = await res.json();
+        // The server reports the authoritative remaining count on success and
+        // on refusal alike — keep the header counter in step with it.
+        if (json.quota) setQuota(json.quota);
+        if (!res.ok) throw new Error(json.error || "Identification failed");
 
-      setForm({
-        team: json.team || "",
-        season: json.season || "",
-        version: json.version,
-        country: json.country,
-        league: json.league,
-        manufacturer: json.manufacturer,
-        notes: "",
-      });
-      setAiConfidence(
-        typeof json.confidence === "number" ? json.confidence : null,
-      );
-      setPrediction({
-        team: json.team,
-        season: json.season,
-        version: json.version,
-        country: json.country,
-        league: json.league,
-        manufacturer: json.manufacturer,
-        confidence: json.confidence,
-      });
-      setStep("form");
-    } catch (e) {
-      // Fall back to a blank form so the user can still add the shirt manually.
-      setForm(EMPTY_FORM);
-      setAiConfidence(null);
-      setPrediction(null);
-      setError(
-        e instanceof Error
-          ? e.message
-          : "AI identification failed — enter the details manually.",
-      );
-      setStep("form");
-    }
-  }, []);
+        setForm({
+          team: json.team || "",
+          season: json.season || "",
+          version: json.version,
+          country: json.country,
+          league: json.league,
+          manufacturer: json.manufacturer,
+          notes: "",
+        });
+        setAiConfidence(
+          typeof json.confidence === "number" ? json.confidence : null,
+        );
+        setPrediction({
+          team: json.team,
+          season: json.season,
+          version: json.version,
+          country: json.country,
+          league: json.league,
+          manufacturer: json.manufacturer,
+          confidence: json.confidence,
+        });
+        setStep("form");
+      } catch (e) {
+        // Fall back to a blank form so the user can still add the shirt manually.
+        setForm(EMPTY_FORM);
+        setAiConfidence(null);
+        setPrediction(null);
+        setError(
+          e instanceof Error
+            ? e.message
+            : "AI identification failed — enter the details manually.",
+        );
+        setStep("form");
+      }
+    },
+    [setQuota],
+  );
 
   const selectFile = (picked: File | undefined) => {
     if (!picked || !picked.type.startsWith("image/")) return;
@@ -163,8 +167,18 @@ export function AddShirtModal({
       return URL.createObjectURL(picked);
     });
     setFile(picked);
-    // In the upload step, picking a photo kicks off AI identification.
-    if (!isEditing && step === "upload") runIdentify(picked);
+    if (isEditing || step !== "upload") return;
+
+    // No credit left: skip the API call entirely and let the user type the
+    // details in. Saving the shirt itself is never rationed.
+    if (outOfCredit) {
+      setError(
+        `You've used all ${quota?.userLimit ?? 0} AI identifications for today — fill the details in manually.`,
+      );
+      setStep("form");
+      return;
+    }
+    runIdentify(picked);
   };
 
   const update = <K extends keyof ShirtFormData>(
@@ -276,10 +290,20 @@ export function AddShirtModal({
               </p>
             </div>
           </div>
-          <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-2">
-            <Sparkles className="h-3.5 w-3.5" />
-            AI identification is mocked for now — real analysis lands in Phase 3.
-          </p>
+          {quota === null ? null : outOfCredit ? (
+            <p className="mt-3 flex items-start justify-center gap-1.5 rounded-[var(--radius)] border border-danger/40 bg-danger-soft px-3 py-2 text-xs text-danger">
+              <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              No AI identifications left today ({quota.userLimit}/day on the{" "}
+              {quota.plan} plan). Pick a photo anyway — you can fill the details
+              in yourself.
+            </p>
+          ) : (
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-2">
+              <Sparkles className="h-3.5 w-3.5" />
+              {quota.remaining} of {quota.userLimit} AI identifications left
+              today.
+            </p>
+          )}
         </div>
       )}
 
@@ -373,7 +397,10 @@ export function AddShirtModal({
                   id="version"
                   value={form.version}
                   onChange={(e) =>
-                    update("version", e.target.value as ShirtFormData["version"])
+                    update(
+                      "version",
+                      e.target.value as ShirtFormData["version"],
+                    )
                   }
                 >
                   {VERSIONS.map((v) => (
@@ -432,8 +459,8 @@ export function AddShirtModal({
             {!isEditing && aiConfidence !== null && (
               <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/25 bg-accent-soft p-3 text-xs leading-relaxed text-accent">
                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                AI suggested these details ({aiConfidence}% confidence) — correct
-                anything that&apos;s wrong to help improve future
+                AI suggested these details ({aiConfidence}% confidence) —
+                correct anything that&apos;s wrong to help improve future
                 identifications.
               </p>
             )}

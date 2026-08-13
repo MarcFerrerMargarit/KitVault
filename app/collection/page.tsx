@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { rowToShirt, type ShirtRow } from "@/lib/db";
+import { fetchQuota } from "@/lib/quota";
 import { CollectionHeader } from "@/components/CollectionHeader";
+import { QuotaProvider } from "@/components/QuotaProvider";
 import { ShirtGrid } from "@/components/ShirtGrid";
 
 export default async function CollectionPage() {
@@ -13,9 +15,12 @@ export default async function CollectionPage() {
   // Middleware already guards this, but re-check so we have the user object.
   if (!user) redirect("/login");
 
+  // RLS already restricts this to the owner; the explicit filter is defence in
+  // depth, so a regression in the policies cannot turn into a data leak.
   const { data } = await supabase
     .from("shirts")
     .select("*")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   const shirts = ((data as ShirtRow[] | null) ?? []).map(rowToShirt);
@@ -29,9 +34,7 @@ export default async function CollectionPage() {
     const { data: signed } = await supabase.storage
       .from("shirts")
       .createSignedUrls(paths, 60 * 60); // 1 hour
-    const urlByPath = new Map(
-      (signed ?? []).map((s) => [s.path, s.signedUrl]),
-    );
+    const urlByPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
     for (const shirt of shirts) {
       if (shirt.imagePath) {
         shirt.imageUrl = urlByPath.get(shirt.imagePath) ?? undefined;
@@ -39,12 +42,17 @@ export default async function CollectionPage() {
     }
   }
 
+  // AI identifications the user has left today (null if it cannot be read).
+  const quota = await fetchQuota(supabase);
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <CollectionHeader email={user.email ?? "account"} />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-        <ShirtGrid initialShirts={shirts} />
-      </main>
-    </div>
+    <QuotaProvider initial={quota}>
+      <div className="flex min-h-screen flex-col">
+        <CollectionHeader email={user.email ?? "account"} />
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+          <ShirtGrid initialShirts={shirts} />
+        </main>
+      </div>
+    </QuotaProvider>
   );
 }

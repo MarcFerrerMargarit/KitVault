@@ -2,7 +2,16 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, SearchX, Loader2, AlertCircle, Shirt as ShirtIcon } from "lucide-react";
+import {
+  Plus,
+  SearchX,
+  Loader2,
+  AlertCircle,
+  LayoutGrid,
+  Globe2,
+  X,
+  Shirt as ShirtIcon,
+} from "lucide-react";
 import type { Shirt, ShirtFilters, ShirtFormData } from "@/lib/types";
 import {
   createShirt,
@@ -12,6 +21,7 @@ import {
 import { StatsBar } from "@/components/StatsBar";
 import { FilterBar } from "@/components/FilterBar";
 import { ShirtCard } from "@/components/ShirtCard";
+import { CollectionMap } from "@/components/CollectionMap";
 import { AddShirtModal, type SaveMeta } from "@/components/AddShirtModal";
 import { ShirtDetailModal } from "@/components/ShirtDetailModal";
 import { Button } from "@/components/ui/button";
@@ -27,7 +37,10 @@ const DEFAULT_FILTERS: ShirtFilters = {
   league: "all",
   season: "all",
   version: "all",
+  countryIn: null,
 };
+
+type View = "grid" | "map";
 
 // Palette used to give freshly added shirts a side-band color.
 const NEW_SHIRT_COLORS = [
@@ -58,6 +71,7 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
   }
 
   const [filters, setFilters] = React.useState<ShirtFilters>(DEFAULT_FILTERS);
+  const [view, setView] = React.useState<View>("grid");
   const [error, setError] = React.useState<string | null>(null);
 
   const [selected, setSelected] = React.useState<Shirt | null>(null);
@@ -89,12 +103,17 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
     filters.country !== "all" ||
     filters.league !== "all" ||
     filters.season !== "all" ||
-    filters.version !== "all";
+    filters.version !== "all" ||
+    filters.countryIn !== null;
 
   const filtered = React.useMemo(() => {
     const q = filters.search.trim().toLowerCase();
+    const fromMap = filters.countryIn
+      ? new Set(filters.countryIn.values)
+      : null;
     return shirts.filter((s) => {
       if (q && !s.team.toLowerCase().includes(q)) return false;
+      if (fromMap && !fromMap.has(s.country)) return false;
       if (filters.country !== "all" && s.country !== filters.country)
         return false;
       if (filters.league !== "all" && s.league !== filters.league) return false;
@@ -106,7 +125,28 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
   }, [shirts, filters]);
 
   const patchFilters = (patch: Partial<ShirtFilters>) =>
-    setFilters((prev) => ({ ...prev, ...patch }));
+    setFilters((prev) => ({
+      ...prev,
+      ...patch,
+      // Choosing a country in the dropdown replaces any map selection, so the
+      // two country filters can never fight and return nothing.
+      countryIn:
+        "countryIn" in patch
+          ? (patch.countryIn ?? null)
+          : patch.country !== undefined
+            ? null
+            : prev.countryIn,
+    }));
+
+  /** Clicking a country on the map: filter by it and drop back to the grid. */
+  const handleSelectCountry = (label: string, values: string[]) => {
+    setFilters((prev) => ({
+      ...prev,
+      country: "all",
+      countryIn: { label, values },
+    }));
+    setView("grid");
+  };
 
   const handleView = (shirt: Shirt) => {
     setSelected(shirt);
@@ -210,14 +250,51 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
             )}
           </h1>
           <p className="text-sm text-muted">
-            {filtered.length} of {shirts.length} shirts
-            {hasActiveFilters ? " match your filters" : ""}
+            {view === "map"
+              ? `${shirts.length} ${shirts.length === 1 ? "shirt" : "shirts"} on the map`
+              : `${filtered.length} of ${shirts.length} shirts${
+                  hasActiveFilters ? " match your filters" : ""
+                }`}
           </p>
         </div>
-        <Button size="lg" onClick={handleOpenAdd} className="shrink-0">
-          <Plus className="h-5 w-5" />
-          <span className="hidden sm:inline">Add shirt</span>
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          {/* Grid / map switch */}
+          {!isEmpty && (
+            <div
+              role="tablist"
+              aria-label="Collection view"
+              className="flex items-center gap-0.5 rounded-[var(--radius)] border border-border bg-surface p-0.5"
+            >
+              {(
+                [
+                  { id: "grid", label: "Grid", Icon: LayoutGrid },
+                  { id: "map", label: "Map", Icon: Globe2 },
+                ] as const
+              ).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === id}
+                  title={`${label} view`}
+                  onClick={() => setView(id)}
+                  className={`flex h-9 items-center gap-1.5 rounded-[3px] px-2.5 text-sm font-medium transition-colors ${
+                    view === id
+                      ? "bg-surface-2 text-accent"
+                      : "text-muted hover:text-ink"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <Button size="lg" onClick={handleOpenAdd}>
+            <Plus className="h-5 w-5" />
+            <span className="hidden sm:inline">Add shirt</span>
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -227,7 +304,7 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
         </div>
       )}
 
-      {!isEmpty && (
+      {!isEmpty && view === "grid" && (
         <FilterBar
           filters={filters}
           onChange={patchFilters}
@@ -239,8 +316,24 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
         />
       )}
 
-      {/* Grid / empty states */}
-      {isEmpty ? (
+      {/* A map selection has no home in the filter bar, so it gets its own
+          removable chip — otherwise it would silently hide shirts. */}
+      {view === "grid" && filters.countryIn && (
+        <button
+          type="button"
+          onClick={() => patchFilters({ countryIn: null })}
+          className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm text-accent transition-colors hover:border-accent"
+        >
+          <Globe2 className="h-3.5 w-3.5" />
+          {filters.countryIn.label}
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+
+      {/* Map / grid / empty states */}
+      {!isEmpty && view === "map" ? (
+        <CollectionMap shirts={shirts} onSelectCountry={handleSelectCountry} />
+      ) : isEmpty ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius)] border border-dashed border-border-strong bg-surface py-20 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-accent">
             <ShirtIcon className="h-7 w-7" />

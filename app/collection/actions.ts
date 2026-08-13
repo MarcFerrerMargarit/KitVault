@@ -94,7 +94,13 @@ export async function updateShirt(
   // Only touch the photo when a new one was provided.
   if (imagePath !== undefined) patch.image_path = imagePath;
 
-  const { error } = await supabase.from("shirts").update(patch).eq("id", id);
+  // `user_id` is redundant with RLS, but keeps the row unreachable even if the
+  // policies were ever dropped.
+  const { error } = await supabase
+    .from("shirts")
+    .update(patch)
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   if (error) return { error: error.message };
   revalidatePath("/collection");
@@ -114,9 +120,14 @@ export async function deleteShirt(id: string): Promise<ActionResult> {
     .from("shirts")
     .select("image_path")
     .eq("id", id)
+    .eq("user_id", user.id)
     .single();
 
-  const { error } = await supabase.from("shirts").delete().eq("id", id);
+  const { error } = await supabase
+    .from("shirts")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
   if (error) return { error: error.message };
 
   const imagePath = (row as { image_path: string | null } | null)?.image_path;
