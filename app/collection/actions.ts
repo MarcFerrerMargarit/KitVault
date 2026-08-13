@@ -2,10 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { COLLECTION_FULL_CODE, fetchCollectionLimit } from "@/lib/quota";
 import type { ShirtFormData } from "@/lib/types";
 
 export interface ActionResult {
   error?: string;
+  /** True when the insert was refused because the plan's allowance is spent. */
+  collectionFull?: boolean;
 }
 
 /** Insert a new shirt owned by the current user. */
@@ -45,7 +48,25 @@ export async function createShirt(
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) {
+    // The photo is uploaded before the row is inserted, so a failed insert
+    // would otherwise leave an orphan file sitting in the user's quota.
+    if (imagePath) {
+      await supabase.storage.from("shirts").remove([imagePath]);
+    }
+    // The plan's collection limit is enforced by a trigger, so a full
+    // collection arrives here as a database error rather than a check we ran.
+    if (error.code === COLLECTION_FULL_CODE) {
+      const limit = await fetchCollectionLimit(supabase);
+      return {
+        collectionFull: true,
+        error: limit
+          ? `Your ${limit.plan} plan holds ${limit.maxShirts} shirts and you have ${limit.used}. Upgrade to add more.`
+          : "Your collection is full. Upgrade your plan to add more shirts.",
+      };
+    }
+    return { error: error.message };
+  }
 
   // Record the AI prediction vs. what the user actually saved (Phase 5 data).
   if (prediction && inserted) {
@@ -136,5 +157,54 @@ export async function deleteShirt(id: string): Promise<ActionResult> {
   }
 
   revalidatePath("/collection");
+  return {};
+}
+
+/** Storage list pages at 100 by default; ask for the maximum per round trip. */
+const STORAGE_PAGE = 1000;
+
+/**
+ * Delete the signed-in user's account and everything attached to it.
+ *
+ * Order matters: the photos go first, while we can still authenticate as their
+ * owner. Storage objects are not covered by the database's `on delete cascade`,
+ * so once `auth.users` is gone there is no session left that the storage
+ * policies would accept, and the files would be stranded for good.
+ */
+export async function deleteAccount(): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You are not signed in." };
+
+  // List the whole folder rather than reading `shirts.image_path`: that also
+  // catches uploads whose row never made it in.
+  const paths: string[] = [];
+  for (let offset = 0; ; offset += STORAGE_PAGE) {
+    const { data: files, error } = await supabase.storage
+      .from("shirts")
+      .list(user.id, { limit: STORAGE_PAGE, offset });
+    if (error) return { error: `Could not list your photos: ${error.message}` };
+    if (!files || files.length === 0) break;
+    paths.push(...files.map((file) => `${user.id}/${file.name}`));
+    if (files.length < STORAGE_PAGE) break;
+  }
+
+  if (paths.length > 0) {
+    const { error } = await supabase.storage.from("shirts").remove(paths);
+    // Stop rather than orphan the files: the account still exists, so the user
+    // can retry. Deleting it first would make them unreachable forever.
+    if (error) {
+      return { error: `Could not delete your photos: ${error.message}` };
+    }
+  }
+
+  // Cascades to profiles, shirts, ai_corrections and ai_usage.
+  const { error } = await supabase.rpc("delete_own_account");
+  if (error)
+    return { error: `Could not delete your account: ${error.message}` };
+
+  await supabase.auth.signOut();
   return {};
 }

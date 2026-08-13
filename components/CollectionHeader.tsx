@@ -1,10 +1,12 @@
 "use client";
 
+import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, Settings, Trash2, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Brand } from "@/components/Brand";
 import { AiQuotaBadge } from "@/components/AiQuotaBadge";
+import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -21,6 +23,7 @@ interface CollectionHeaderProps {
 export function CollectionHeader({ email }: CollectionHeaderProps) {
   const router = useRouter();
   const initials = email.slice(0, 2).toUpperCase();
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -50,13 +53,23 @@ export function CollectionHeader({ email }: CollectionHeaderProps) {
               <Settings className="h-4 w-4" />
               Settings
             </DropdownMenuItem>
-            <DropdownMenuItem destructive onClick={handleSignOut}>
+            <DropdownMenuItem onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
               Log out
+            </DropdownMenuItem>
+            <DropdownMenuItem destructive onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="h-4 w-4" />
+              Delete account
             </DropdownMenuItem>
           </DropdownMenu>
         </div>
       </div>
+
+      <DeleteAccountDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        email={email}
+      />
     </header>
   );
 }

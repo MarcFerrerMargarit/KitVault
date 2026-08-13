@@ -61,6 +61,49 @@ export async function fetchQuota(
   return rowToQuota(data as QuotaRow);
 }
 
+/**
+ * How large the user's collection may get. This is the paywall proper — the
+ * AI quota above only rations Gemini calls.
+ */
+export interface CollectionLimit {
+  plan: string;
+  /** `null` means unlimited. */
+  maxShirts: number | null;
+  used: number;
+  /** `null` when unlimited. */
+  remaining: number | null;
+}
+
+interface CollectionLimitRow {
+  plan: string;
+  max_shirts: number | null;
+  used: number;
+  remaining: number | null;
+}
+
+/** Read the current user's collection allowance. `null` if unreadable. */
+export async function fetchCollectionLimit(
+  supabase: SupabaseClient,
+): Promise<CollectionLimit | null> {
+  const { data, error } = await supabase
+    .rpc("collection_limit_status")
+    .single();
+  if (error || !data) return null;
+  const row = data as CollectionLimitRow;
+  return {
+    plan: row.plan,
+    maxShirts: row.max_shirts,
+    used: row.used,
+    remaining: row.remaining,
+  };
+}
+
+/**
+ * SQLSTATE raised by the `shirts_enforce_limit` trigger, so the app can tell
+ * "your collection is full" apart from a genuine database error.
+ */
+export const COLLECTION_FULL_CODE = "KV001";
+
 /** Why an identification was refused. */
 export type QuotaDenialReason = "user_quota" | "global_quota" | "burst";
 

@@ -9,10 +9,12 @@ import {
   AlertCircle,
   LayoutGrid,
   Globe2,
+  Lock,
   X,
   Shirt as ShirtIcon,
 } from "lucide-react";
 import type { Shirt, ShirtFilters, ShirtFormData } from "@/lib/types";
+import type { CollectionLimit } from "@/lib/quota";
 import {
   createShirt,
   updateShirt,
@@ -29,6 +31,8 @@ import { Button } from "@/components/ui/button";
 interface ShirtGridProps {
   /** Shirts fetched on the server for the signed-in user. */
   initialShirts: Shirt[];
+  /** How many shirts the user's plan allows. `null` if it cannot be read. */
+  collectionLimit: CollectionLimit | null;
 }
 
 const DEFAULT_FILTERS: ShirtFilters = {
@@ -58,7 +62,7 @@ const NEW_SHIRT_COLORS = [
  * props; mutations go through Server Actions and are applied optimistically,
  * then reconciled when the server sends fresh props after revalidation.
  */
-export function ShirtGrid({ initialShirts }: ShirtGridProps) {
+export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
 
@@ -153,7 +157,13 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
     setDetailOpen(true);
   };
 
+  // `null` max = unlimited plan (or the limit could not be read: never block
+  // the user on a failed lookup — the database trigger is the real gate).
+  const maxShirts = collectionLimit?.maxShirts ?? null;
+  const isFull = maxShirts !== null && shirts.length >= maxShirts;
+
   const handleOpenAdd = () => {
+    if (isFull) return;
     setEditing(null);
     setAddOpen(true);
   };
@@ -290,12 +300,49 @@ export function ShirtGrid({ initialShirts }: ShirtGridProps) {
               ))}
             </div>
           )}
-          <Button size="lg" onClick={handleOpenAdd}>
+          <Button
+            size="lg"
+            onClick={handleOpenAdd}
+            disabled={isFull}
+            title={
+              isFull
+                ? `Your ${collectionLimit?.plan} plan holds ${maxShirts} shirts`
+                : undefined
+            }
+          >
             <Plus className="h-5 w-5" />
             <span className="hidden sm:inline">Add shirt</span>
           </Button>
         </div>
       </div>
+
+      {/* Plan allowance. Shown once the vault is more than half full, so it is
+          a heads-up rather than permanent noise. */}
+      {maxShirts !== null && shirts.length >= maxShirts / 2 && (
+        <div
+          className={`flex items-center gap-3 rounded-[var(--radius)] border px-4 py-3 text-sm ${
+            isFull
+              ? "border-warning/40 bg-warning-soft text-warning"
+              : "border-border bg-surface text-muted"
+          }`}
+        >
+          <Lock className="h-4 w-4 shrink-0" />
+          <span className="flex-1">
+            {isFull ? (
+              <>
+                Your collection is full — {maxShirts} shirts on the{" "}
+                {collectionLimit?.plan} plan. Upgrade to keep adding, or delete
+                one to make room.
+              </>
+            ) : (
+              <>
+                {shirts.length} of {maxShirts} shirts used on the{" "}
+                {collectionLimit?.plan} plan.
+              </>
+            )}
+          </span>
+        </div>
+      )}
 
       {error && (
         <div className="flex items-center gap-2 rounded-[var(--radius)] border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger">
