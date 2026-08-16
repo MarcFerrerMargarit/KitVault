@@ -8,6 +8,10 @@ import {
 } from "@/lib/quota";
 import { VERSIONS } from "@/lib/mock-data";
 
+// Vercel functions default to a 10s ceiling and a vision call with a photo can
+// get close to it. 60s is the most the Hobby plan allows.
+export const maxDuration = 60;
+
 // Cheap, fast, vision-capable model with structured output.
 const MODEL = "gemini-2.5-flash";
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB

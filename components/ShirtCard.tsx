@@ -30,11 +30,16 @@ export function ShirtCard({ shirt, onView }: ShirtCardProps) {
 
       {/* Image / placeholder */}
       <div className="relative aspect-[4/5] w-full overflow-hidden">
-        {shirt.imageUrl ? (
+        {shirt.thumbUrl || shirt.imageUrl ? (
+          // The grid loads the 400px thumbnail; the full image is only fetched
+          // in the detail view. eslint-disable-next-line is for next/image,
+          // which we skip because these are signed URLs on a private bucket.
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={shirt.imageUrl}
+            src={shirt.thumbUrl ?? shirt.imageUrl}
             alt={`${shirt.team} ${shirt.season} ${shirt.version}`}
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
@@ -54,7 +59,10 @@ export function ShirtCard({ shirt, onView }: ShirtCardProps) {
 
         {/* Manufacturer badge */}
         <div className="absolute right-2 top-2">
-          <Badge variant="outline" className="border-white/20 bg-black/40 text-white/80 backdrop-blur-sm">
+          <Badge
+            variant="outline"
+            className="border-white/20 bg-black/40 text-white/80 backdrop-blur-sm"
+          >
             {shirt.manufacturer}
           </Badge>
         </div>

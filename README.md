@@ -96,7 +96,7 @@ project — but read the "when you start paying" note at the end first.
 | Domain (`.com`)     | ~€10-15/year | The only unavoidable payment                      |
 | Hosting (Vercel)    | €0           | Hobby plan — **non-commercial use only**          |
 | Database (Supabase) | €0           | Free tier; the project pauses after a week idle   |
-| Transactional email | €0           | Resend/similar free tier — see step 6             |
+| Transactional email | €0           | Resend/similar free tier — see step 5             |
 | Gemini              | €0           | The same free-tier key, see [AI quota](#ai-quota) |
 | HTTPS certificate   | €0           | Issued and renewed automatically                  |
 
@@ -108,27 +108,21 @@ project — but read the "when you start paying" note at the end first.
 3. **Set the three environment variables** in Vercel → Settings →
    Environment Variables (the same ones as `.env.local`). `GEMINI_API_KEY` must
    _not_ be prefixed with `NEXT_PUBLIC_`, or it ends up in the browser bundle.
-4. **Raise the identify route's timeout.** Vercel Hobby functions default to a
-   10s limit and a Gemini call with a photo can approach it. Add to
-   `app/api/identify/route.ts`:
-   ```ts
-   export const maxDuration = 60; // seconds; Hobby allows up to 60
-   ```
-5. **Point the domain at Vercel** — buy it anywhere, add it under Vercel →
+4. **Point the domain at Vercel** — buy it anywhere, add it under Vercel →
    Domains, and set the DNS records it gives you. HTTPS is automatic.
-6. **Configure custom SMTP in Supabase** → Authentication → Emails. This is not
+5. **Configure custom SMTP in Supabase** → Authentication → Emails. This is not
    optional: the built-in sender is capped at **2 emails per hour for the whole
    project**, and signup depends on a confirmation email, so the third person to
    register in an hour silently gets nothing. A custom SMTP provider raises it
    to 30/hour, adjustable.
-7. **Update Supabase → Authentication → URL Configuration**: set the Site URL to
+6. **Update Supabase → Authentication → URL Configuration**: set the Site URL to
    the real domain and add `https://yourdomain.com/auth/callback` to the redirect
    allow-list. Otherwise confirmation links keep pointing at `localhost:3000`.
    No code change is needed — the app derives its origin from the request.
-8. **Run the migrations** against the production database (`schema.sql` if it is
+7. **Run the migrations** against the production database (`schema.sql` if it is
    a fresh project, then `001`, `002` and `003`). `/api/identify` returns 500
    until `002` has run, and the paywall does not exist until `003` has.
-9. **Check it end to end**: sign up with a real address, confirm, add a shirt
+8. **Check it end to end**: sign up with a real address, confirm, add a shirt
    with a photo, and watch the quota counter go down.
 
 ### One Supabase project or two?
@@ -212,6 +206,38 @@ The geometry is projected on the server (Equal Earth, so a country's ink matches
 its real area) and served from `/api/world-map` — about 110 KB, cached for a
 year in production and never in development. It is deliberately _not_ part of
 the `/collection` payload: the map pays for it once, on first open.
+
+## Photos and bandwidth
+
+Phone photos are 3-5 MB. Stored and served raw, a 25-shirt grid would pull
+~75 MB **on every page view** — the largest variable cost of running this app
+(Supabase Pro includes 250 GB of egress, then charges per GB) and painful on
+mobile data. So nothing is uploaded at its original size.
+
+`lib/image.ts` downscales in the browser before anything leaves it, producing
+two JPEGs from each pick:
+
+| Version | Long edge | Typical size | Used by             |
+| ------- | --------- | ------------ | ------------------- |
+| `full`  | 1600px    | ~600 KB      | The detail view     |
+| `thumb` | 400px     | ~40 KB       | The collection grid |
+
+Measured on a synthetic 4032×3024 photo: **3.2 MB → 588 KB full, 39 KB thumb**,
+in 117 ms. Real photos compress better than the noise used in that test. The
+grid therefore loads ~1 MB instead of ~80 MB.
+
+Details worth knowing:
+
+- The thumbnail's path is a convention, not a column: `<uid>/<uuid>.jpg` →
+  `<uid>/<uuid>_thumb.jpg`. Shirts added before thumbnails existed have no file
+  there, the signed-URL call skips them, and the grid falls back to the full
+  image — no migration, no backfill.
+- Re-encoding as JPEG also **strips EXIF**, including any GPS coordinates the
+  camera wrote into the original. Worth keeping in mind before changing this.
+- If the browser cannot decode a file, the original is uploaded unchanged
+  rather than the upload being refused.
+- `/api/identify` receives the downscaled copy. Gemini tiles images to a capped
+  number of tokens, so this costs no accuracy and uploads far quicker.
 
 ## Plans and limits
 
@@ -368,6 +394,7 @@ lib/
   supabase/                # Browser, server and middleware clients
   db.ts                    # `shirts` row shape + row → domain mapper
   quota.ts                 # Quota types, RPC reader, refusal messages
+  image.ts                 # Browser-side downscaling + thumbnail paths
   world-map.ts             # Projects the country outlines (server only)
   country-match.ts         # Free-text country → map country
   types.ts                 # Domain types

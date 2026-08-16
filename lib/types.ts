@@ -33,6 +33,11 @@ export interface Shirt {
   imagePath?: string;
   /** Resolved (signed) URL for display. Not persisted in the DB. */
   imageUrl?: string;
+  /**
+   * Signed URL of the 400px thumbnail the grid loads. Absent for shirts added
+   * before thumbnails existed, in which case the grid falls back to `imageUrl`.
+   */
+  thumbUrl?: string;
   /** Mock AI identification metadata. */
   ai: {
     label: string; // e.g. "FC Barcelona Home 2019-20"

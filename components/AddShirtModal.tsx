@@ -5,6 +5,7 @@ import { UploadCloud, Sparkles, Loader2, Info, ImagePlus } from "lucide-react";
 import type { Shirt, ShirtFormData } from "@/lib/types";
 import { COUNTRIES, LEAGUES, MANUFACTURERS, VERSIONS } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/client";
+import { prepareImages, thumbPath, type PreparedImages } from "@/lib/image";
 import { useQuota } from "@/components/QuotaProvider";
 import {
   Dialog,
@@ -66,7 +67,11 @@ export function AddShirtModal({
   const [aiConfidence, setAiConfidence] = React.useState<number | null>(null);
   const [dragging, setDragging] = React.useState(false);
 
-  const [file, setFile] = React.useState<File | null>(null);
+  /** The picked photo, downscaled. `thumb` is null if downscaling failed. */
+  const [upload, setUpload] = React.useState<{
+    full: File;
+    thumb: File | null;
+  } | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -82,7 +87,7 @@ export function AddShirtModal({
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setFile(null);
+      setUpload(null);
       setPreviewUrl(null);
       setSaving(false);
       setError(null);
@@ -160,13 +165,33 @@ export function AddShirtModal({
     [setQuota],
   );
 
-  const selectFile = (picked: File | undefined) => {
+  const selectFile = async (picked: File | undefined) => {
     if (!picked || !picked.type.startsWith("image/")) return;
     setPreviewUrl((prev) => {
       if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
       return URL.createObjectURL(picked);
     });
-    setFile(picked);
+
+    const identifying = !isEditing && step === "upload" && !outOfCredit;
+    // Show the spinner before the (brief) downscale, so picking a photo feels
+    // instant even on a slow phone.
+    if (identifying) setStep("analyzing");
+
+    // Downscale before anything leaves the browser: a raw 4MB phone photo
+    // costs storage and, on every grid view afterwards, bandwidth.
+    let prepared: PreparedImages | null = null;
+    try {
+      prepared = await prepareImages(picked);
+    } catch {
+      // Unsupported or corrupt file — upload the original rather than refuse.
+      prepared = null;
+    }
+    setUpload(
+      prepared
+        ? { full: prepared.full, thumb: prepared.thumb }
+        : { full: picked, thumb: null },
+    );
+
     if (isEditing || step !== "upload") return;
 
     // No credit left: skip the API call entirely and let the user type the
@@ -178,7 +203,9 @@ export function AddShirtModal({
       setStep("form");
       return;
     }
-    runIdentify(picked);
+    // Send the downscaled copy: same tokens (Gemini tiles the image anyway),
+    // far less to upload.
+    runIdentify(prepared?.full ?? picked);
   };
 
   const update = <K extends keyof ShirtFormData>(
@@ -196,7 +223,7 @@ export function AddShirtModal({
     let uploadedPath: string | null | undefined = undefined;
 
     // Upload a newly selected photo to the private `shirts` bucket.
-    if (file) {
+    if (upload) {
       const supabase = createClient();
       const {
         data: { user },
@@ -206,16 +233,31 @@ export function AddShirtModal({
         setSaving(false);
         return;
       }
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const ext = upload.full.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("shirts")
-        .upload(path, file, { contentType: file.type, upsert: false });
+        .upload(path, upload.full, {
+          contentType: upload.full.type,
+          upsert: false,
+        });
       if (upErr) {
         setError(`Photo upload failed: ${upErr.message}`);
         setSaving(false);
         return;
       }
+
+      // The thumbnail is what the grid loads. Best-effort: if it fails the
+      // shirt still saves and the grid falls back to the full image.
+      if (upload.thumb) {
+        await supabase.storage
+          .from("shirts")
+          .upload(thumbPath(path), upload.thumb, {
+            contentType: upload.thumb.type,
+            upsert: true,
+          });
+      }
+
       uploadedPath = path;
     }
 

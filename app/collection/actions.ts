@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { COLLECTION_FULL_CODE, fetchCollectionLimit } from "@/lib/quota";
+import { thumbPath } from "@/lib/image";
 import type { ShirtFormData } from "@/lib/types";
 
 export interface ActionResult {
@@ -52,7 +53,9 @@ export async function createShirt(
     // The photo is uploaded before the row is inserted, so a failed insert
     // would otherwise leave an orphan file sitting in the user's quota.
     if (imagePath) {
-      await supabase.storage.from("shirts").remove([imagePath]);
+      await supabase.storage
+        .from("shirts")
+        .remove([imagePath, thumbPath(imagePath)]);
     }
     // The plan's collection limit is enforced by a trigger, so a full
     // collection arrives here as a database error rather than a check we ran.
@@ -153,7 +156,11 @@ export async function deleteShirt(id: string): Promise<ActionResult> {
 
   const imagePath = (row as { image_path: string | null } | null)?.image_path;
   if (imagePath) {
-    await supabase.storage.from("shirts").remove([imagePath]);
+    // Remove the thumbnail too; older shirts have none and that path is
+    // simply ignored.
+    await supabase.storage
+      .from("shirts")
+      .remove([imagePath, thumbPath(imagePath)]);
   }
 
   revalidatePath("/collection");
