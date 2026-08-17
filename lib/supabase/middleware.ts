@@ -4,8 +4,14 @@ import { NextResponse, type NextRequest } from "next/server";
 /** Routes that require an authenticated user. */
 const PROTECTED_PREFIXES = ["/collection"];
 
-/** Routes that an already-authenticated user should be bounced away from. */
-const AUTH_ROUTES = ["/login", "/signup"];
+/**
+ * Routes that an already-authenticated user should be bounced away from.
+ *
+ * `/update-password` is deliberately absent: following a recovery link signs
+ * the user in *before* they reach it, so bouncing authenticated users would
+ * make the password reset impossible to finish.
+ */
+const AUTH_ROUTES = ["/login", "/signup", "/forgot-password"];
 
 /**
  * Refreshes the Supabase auth session on every request and enforces access

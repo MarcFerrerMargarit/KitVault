@@ -47,8 +47,10 @@ Create a project at [supabase.com](https://supabase.com), then:
    - `004_plan_features_and_pricing.sql` — **required**. Bulk upload as a plan
      feature, plan prices, and public read access for the pricing table.
 3. **Authentication → URL Configuration** → set the Site URL to
-   `http://localhost:3000` and add `http://localhost:3000/auth/callback` to the
-   redirect allow-list, so email confirmation links come back to the app.
+   `http://localhost:3000` and add `http://localhost:3000/**` to the redirect
+   allow-list. The wildcard matters: password-reset links come back as
+   `/auth/callback?next=/update-password&code=…`, and an entry without it can
+   reject the extra query.
 4. **Project Settings → API Keys** → copy the project URL and the anon
    (publishable) key for the next step.
 
@@ -118,14 +120,15 @@ project — but read the "when you start paying" note at the end first.
    register in an hour silently gets nothing. A custom SMTP provider raises it
    to 30/hour, adjustable.
 6. **Update Supabase → Authentication → URL Configuration**: set the Site URL to
-   the real domain and add `https://yourdomain.com/auth/callback` to the redirect
+   the real domain and add `https://yourdomain.com/**` to the redirect
    allow-list. Otherwise confirmation links keep pointing at `localhost:3000`.
    No code change is needed — the app derives its origin from the request.
 7. **Run the migrations** against the production database (`schema.sql` if it
    is a fresh project, then `001` through `004`). `/api/identify` returns 500
    until `002` has run, and the paywall does not exist until `003` has.
 8. **Check it end to end**: sign up with a real address, confirm, add a shirt
-   with a photo, and watch the quota counter go down.
+   with a photo, watch the quota counter go down — then log out, use
+   **Forgot it?** and complete a password reset.
 
 ### One Supabase project or two?
 
@@ -150,6 +153,8 @@ project when that starts to matter.
 | -------------------- | ----------------------------------------------------------------- |
 | `/`                  | Landing page — hero, kit marquee, pricing, CTAs                   |
 | `/login`, `/signup`  | Email + password auth (redirects to `/collection` when signed in) |
+| `/forgot-password`   | Request a password-reset link                                     |
+| `/update-password`   | Set a new password after following that link                      |
 | `/auth/callback`     | Exchanges the Supabase confirmation code for a session            |
 | `/collection`        | The collection — server-rendered from Postgres; auth-protected    |
 | `POST /api/identify` | Gemini Vision identification (auth required, 10 MB image limit)   |
@@ -240,6 +245,67 @@ Details worth knowing:
   rather than the upload being refused.
 - `/api/identify` receives the downscaled copy. Gemini tiles images to a capped
   number of tokens, so this costs no accuracy and uploads far quicker.
+
+## Signing up and getting back in
+
+Both email flows run through the same `/auth/callback`. Supabase can deliver the
+credential in three different shapes, and the route handles all of them —
+handling only the first is why an emailed link can appear to do nothing at all:
+
+| Shape                | When                                     | How it is handled                                                                |
+| -------------------- | ---------------------------------------- | -------------------------------------------------------------------------------- |
+| `?code=`             | PKCE, the default for the browser client | `exchangeCodeForSession`                                                         |
+| `?token_hash=&type=` | Email OTP, what the stock templates send | `verifyOtp`                                                                      |
+| `#access_token=`     | Implicit flow                            | Fragments never reach a server: forward, and the browser client reads it on load |
+
+A `type=recovery` link is forced to `/update-password` whatever `next` says, and
+any error Supabase reports (`?error_description=`) is passed to the login page,
+**which now displays it**. Previously the callback redirected to
+`/login?error=auth` and nothing rendered that param, so a dead link looked
+identical to a link that did nothing.
+
+| Flow                  | Where the link lands                   | Then                         |
+| --------------------- | -------------------------------------- | ---------------------------- |
+| Confirm a new account | `/auth/callback?next=/collection`      | Straight into the collection |
+| Reset a password      | `/auth/callback?next=/update-password` | Asked to choose a new one    |
+
+That `next` on the reset link is the whole trick. Without it the recovery link
+signs the user in and drops them in the app, **never asking for a new
+password** — they end up logged in with the password they could not remember.
+
+Other details that matter more than they look:
+
+- `/update-password` is deliberately not in the middleware's auth-route list.
+  Those routes bounce signed-in users away, and by the time someone reaches this
+  page the recovery link has already signed them in — bouncing them would make
+  the reset impossible to finish.
+- Reaching `/update-password` without a session means the link was expired or
+  already used, so the page says exactly that and offers a fresh one instead of
+  failing on save.
+- **The reset form never reveals whether an address has an account.** It reports
+  the same "check your email" either way; anything else turns it into a way to
+  probe who is registered here.
+- The "check your email" screen after signup can **resend the confirmation**.
+  Those emails go missing often enough that without it the only way back is to
+  sign up again with the same address.
+
+### Email confirmation is a Supabase setting
+
+**Authentication → Sign In / Providers → Confirm email** decides whether signup
+sends anything at all. With it off, `signUp` returns a session immediately and
+the app takes the user straight to their collection — the "check your email"
+screen never appears. That is a reasonable way to test with people you know.
+
+Turn it on before opening the app to strangers: without it, anyone can register
+under an address they do not own, and there is then no way to reach the real
+owner or to trust the address for a password reset.
+
+Password recovery is **not** affected by that setting — it always emails.
+
+Either way, configure a custom SMTP sender before letting people in: Supabase's
+built-in one sends **2 emails per hour for the whole project**. That is enough
+to test the reset flow on your own address a couple of times, and nowhere near
+enough for real users. See step 5 of the [deployment checklist](#checklist).
 
 ## Plans and limits
 
@@ -431,6 +497,8 @@ components/
   ShirtFields.tsx          # The editable shirt fields, shared by both flows
   DeleteAccountDialog.tsx  # GDPR account deletion, confirmed by email
   auth/AuthForm.tsx        # Shared login / signup form
+  auth/ForgotPasswordForm.tsx  # Request a reset link
+  auth/UpdatePasswordForm.tsx  # Set the new password
   landing/                 # HeroBackdrop, KitMarquee, Pricing
   ui/                      # Button, Card, Dialog, Select, Input, Badge, …
 lib/
