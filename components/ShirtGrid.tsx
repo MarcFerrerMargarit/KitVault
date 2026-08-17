@@ -9,6 +9,7 @@ import {
   AlertCircle,
   LayoutGrid,
   Globe2,
+  Layers,
   Lock,
   X,
   Shirt as ShirtIcon,
@@ -25,6 +26,9 @@ import { FilterBar } from "@/components/FilterBar";
 import { ShirtCard } from "@/components/ShirtCard";
 import { CollectionMap } from "@/components/CollectionMap";
 import { AddShirtModal, type SaveMeta } from "@/components/AddShirtModal";
+import { BulkAddModal } from "@/components/BulkAddModal";
+import { BulkJobBadge } from "@/components/BulkJobBadge";
+import { BulkJobProvider, useBulkJob } from "@/components/BulkJobProvider";
 import { ShirtDetailModal } from "@/components/ShirtDetailModal";
 import { Button } from "@/components/ui/button";
 
@@ -168,6 +172,30 @@ export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
     setAddOpen(true);
   };
 
+  /**
+   * Bulk upload is a paid perk. This only hides the button — the limits that
+   * actually cost money (AI credits, collection size) are enforced server-side
+   * either way, so nothing here is a security boundary.
+   */
+  const canBulk = collectionLimit?.bulkUpload === true;
+
+  const handleBulkSaved = (result: {
+    saved: number;
+    failures: { team: string; error: string }[];
+  }) => {
+    if (result.failures.length > 0) {
+      const [first] = result.failures;
+      setError(
+        result.saved > 0
+          ? `Saved ${result.saved}, but ${result.failures.length} could not be added. ${first.error}`
+          : first.error,
+      );
+    } else {
+      setError(null);
+    }
+    startTransition(() => router.refresh());
+  };
+
   const handleEdit = (shirt: Shirt) => {
     setDetailOpen(false);
     setEditing(shirt);
@@ -247,200 +275,241 @@ export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
   const isEmpty = shirts.length === 0;
 
   return (
-    <div className="space-y-6">
-      <StatsBar shirts={shirts} />
+    <BulkJobProvider onSaved={handleBulkSaved}>
+      <div className="space-y-6">
+        <StatsBar shirts={shirts} />
 
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="flex items-center gap-2 font-display text-2xl font-bold uppercase tracking-wide text-white sm:text-3xl">
-            Your collection
-            {isPending && (
-              <Loader2 className="h-4 w-4 animate-spin text-muted" />
-            )}
-          </h1>
-          <p className="text-sm text-muted">
-            {view === "map"
-              ? `${shirts.length} ${shirts.length === 1 ? "shirt" : "shirts"} on the map`
-              : `${filtered.length} of ${shirts.length} shirts${
-                  hasActiveFilters ? " match your filters" : ""
-                }`}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {/* Grid / map switch */}
-          {!isEmpty && (
-            <div
-              role="tablist"
-              aria-label="Collection view"
-              className="flex items-center gap-0.5 rounded-[var(--radius)] border border-border bg-surface p-0.5"
-            >
-              {(
-                [
-                  { id: "grid", label: "Grid", Icon: LayoutGrid },
-                  { id: "map", label: "Map", Icon: Globe2 },
-                ] as const
-              ).map(({ id, label, Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={view === id}
-                  title={`${label} view`}
-                  onClick={() => setView(id)}
-                  className={`flex h-9 items-center gap-1.5 rounded-[3px] px-2.5 text-sm font-medium transition-colors ${
-                    view === id
-                      ? "bg-surface-2 text-accent"
-                      : "text-muted hover:text-ink"
+        {/* Toolbar */}
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="flex items-center gap-2 font-display text-2xl font-bold uppercase tracking-wide text-white sm:text-3xl">
+              Your collection
+              {isPending && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted" />
+              )}
+            </h1>
+            <p className="text-sm text-muted">
+              {view === "map"
+                ? `${shirts.length} ${shirts.length === 1 ? "shirt" : "shirts"} on the map`
+                : `${filtered.length} of ${shirts.length} shirts${
+                    hasActiveFilters ? " match your filters" : ""
                   }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          <Button
-            size="lg"
-            onClick={handleOpenAdd}
-            disabled={isFull}
-            title={
-              isFull
-                ? `Your ${collectionLimit?.plan} plan holds ${maxShirts} shirts`
-                : undefined
-            }
-          >
-            <Plus className="h-5 w-5" />
-            <span className="hidden sm:inline">Add shirt</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Plan allowance. Shown once the vault is more than half full, so it is
-          a heads-up rather than permanent noise. */}
-      {maxShirts !== null && shirts.length >= maxShirts / 2 && (
-        <div
-          className={`flex items-center gap-3 rounded-[var(--radius)] border px-4 py-3 text-sm ${
-            isFull
-              ? "border-warning/40 bg-warning-soft text-warning"
-              : "border-border bg-surface text-muted"
-          }`}
-        >
-          <Lock className="h-4 w-4 shrink-0" />
-          <span className="flex-1">
-            {isFull ? (
-              <>
-                Your collection is full — {maxShirts} shirts on the{" "}
-                {collectionLimit?.plan} plan. Upgrade to keep adding, or delete
-                one to make room.
-              </>
-            ) : (
-              <>
-                {shirts.length} of {maxShirts} shirts used on the{" "}
-                {collectionLimit?.plan} plan.
-              </>
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {/* Grid / map switch */}
+            {!isEmpty && (
+              <div
+                role="tablist"
+                aria-label="Collection view"
+                className="flex items-center gap-0.5 rounded-[var(--radius)] border border-border bg-surface p-0.5"
+              >
+                {(
+                  [
+                    { id: "grid", label: "Grid", Icon: LayoutGrid },
+                    { id: "map", label: "Map", Icon: Globe2 },
+                  ] as const
+                ).map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={view === id}
+                    title={`${label} view`}
+                    onClick={() => setView(id)}
+                    className={`flex h-9 items-center gap-1.5 rounded-[3px] px-2.5 text-sm font-medium transition-colors ${
+                      view === id
+                        ? "bg-surface-2 text-accent"
+                        : "text-muted hover:text-ink"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="hidden sm:inline">{label}</span>
+                  </button>
+                ))}
+              </div>
             )}
-          </span>
-        </div>
-      )}
-
-      {error && (
-        <div className="flex items-center gap-2 rounded-[var(--radius)] border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          {error}
-        </div>
-      )}
-
-      {!isEmpty && view === "grid" && (
-        <FilterBar
-          filters={filters}
-          onChange={patchFilters}
-          onReset={() => setFilters(DEFAULT_FILTERS)}
-          hasActiveFilters={hasActiveFilters}
-          countries={countries}
-          leagues={leagues}
-          seasons={seasons}
-        />
-      )}
-
-      {/* A map selection has no home in the filter bar, so it gets its own
-          removable chip — otherwise it would silently hide shirts. */}
-      {view === "grid" && filters.countryIn && (
-        <button
-          type="button"
-          onClick={() => patchFilters({ countryIn: null })}
-          className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm text-accent transition-colors hover:border-accent"
-        >
-          <Globe2 className="h-3.5 w-3.5" />
-          {filters.countryIn.label}
-          <X className="h-3.5 w-3.5" />
-        </button>
-      )}
-
-      {/* Map / grid / empty states */}
-      {!isEmpty && view === "map" ? (
-        <CollectionMap shirts={shirts} onSelectCountry={handleSelectCountry} />
-      ) : isEmpty ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius)] border border-dashed border-border-strong bg-surface py-20 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-accent">
-            <ShirtIcon className="h-7 w-7" />
+            {canBulk && <BulkAddButton disabled={isFull} />}
+            <Button
+              size="lg"
+              onClick={handleOpenAdd}
+              disabled={isFull}
+              title={
+                isFull
+                  ? `Your ${collectionLimit?.plan} plan holds ${maxShirts} shirts`
+                  : undefined
+              }
+            >
+              <Plus className="h-5 w-5" />
+              <span className="hidden sm:inline">Add shirt</span>
+            </Button>
           </div>
-          <div>
-            <p className="font-display text-lg font-bold uppercase tracking-wide text-white">
-              Your vault is empty
-            </p>
-            <p className="mt-1 text-sm text-muted">
-              Add your first shirt to get started.
-            </p>
-          </div>
-          <Button size="sm" onClick={handleOpenAdd}>
-            <Plus className="h-4 w-4" />
-            Add shirt
-          </Button>
         </div>
-      ) : filtered.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {filtered.map((shirt) => (
-            <ShirtCard key={shirt.id} shirt={shirt} onView={handleView} />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius)] border border-dashed border-border-strong bg-surface py-20 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-muted">
-            <SearchX className="h-7 w-7" />
-          </div>
-          <div>
-            <p className="font-display text-lg font-bold uppercase tracking-wide text-white">
-              No shirts found
-            </p>
-            <p className="mt-1 text-sm text-muted">
-              Try adjusting or resetting your filters.
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setFilters(DEFAULT_FILTERS)}
+
+        {/* Plan allowance. Shown once the vault is more than half full, so it is
+          a heads-up rather than permanent noise. */}
+        {maxShirts !== null && shirts.length >= maxShirts / 2 && (
+          <div
+            className={`flex items-center gap-3 rounded-[var(--radius)] border px-4 py-3 text-sm ${
+              isFull
+                ? "border-warning/40 bg-warning-soft text-warning"
+                : "border-border bg-surface text-muted"
+            }`}
           >
-            Reset filters
-          </Button>
-        </div>
-      )}
+            <Lock className="h-4 w-4 shrink-0" />
+            <span className="flex-1">
+              {isFull ? (
+                <>
+                  Your collection is full — {maxShirts} shirts on the{" "}
+                  {collectionLimit?.plan} plan. Upgrade to keep adding, or
+                  delete one to make room.
+                </>
+              ) : (
+                <>
+                  {shirts.length} of {maxShirts} shirts used on the{" "}
+                  {collectionLimit?.plan} plan.
+                </>
+              )}
+            </span>
+          </div>
+        )}
 
-      {/* Modals */}
-      <AddShirtModal
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        onSave={handleSave}
-        editingShirt={editing}
-      />
-      <ShirtDetailModal
-        shirt={selected}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
-    </div>
+        {error && (
+          <div className="flex items-center gap-2 rounded-[var(--radius)] border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {error}
+          </div>
+        )}
+
+        {!isEmpty && view === "grid" && (
+          <FilterBar
+            filters={filters}
+            onChange={patchFilters}
+            onReset={() => setFilters(DEFAULT_FILTERS)}
+            hasActiveFilters={hasActiveFilters}
+            countries={countries}
+            leagues={leagues}
+            seasons={seasons}
+          />
+        )}
+
+        {/* A map selection has no home in the filter bar, so it gets its own
+          removable chip — otherwise it would silently hide shirts. */}
+        {view === "grid" && filters.countryIn && (
+          <button
+            type="button"
+            onClick={() => patchFilters({ countryIn: null })}
+            className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm text-accent transition-colors hover:border-accent"
+          >
+            <Globe2 className="h-3.5 w-3.5" />
+            {filters.countryIn.label}
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        {/* Map / grid / empty states */}
+        {!isEmpty && view === "map" ? (
+          <CollectionMap
+            shirts={shirts}
+            onSelectCountry={handleSelectCountry}
+          />
+        ) : isEmpty ? (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius)] border border-dashed border-border-strong bg-surface py-20 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-accent">
+              <ShirtIcon className="h-7 w-7" />
+            </div>
+            <div>
+              <p className="font-display text-lg font-bold uppercase tracking-wide text-white">
+                Your vault is empty
+              </p>
+              <p className="mt-1 text-sm text-muted">
+                Add your first shirt to get started.
+              </p>
+            </div>
+            <Button size="sm" onClick={handleOpenAdd}>
+              <Plus className="h-4 w-4" />
+              Add shirt
+            </Button>
+          </div>
+        ) : filtered.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {filtered.map((shirt) => (
+              <ShirtCard key={shirt.id} shirt={shirt} onView={handleView} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius)] border border-dashed border-border-strong bg-surface py-20 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-muted">
+              <SearchX className="h-7 w-7" />
+            </div>
+            <div>
+              <p className="font-display text-lg font-bold uppercase tracking-wide text-white">
+                No shirts found
+              </p>
+              <p className="mt-1 text-sm text-muted">
+                Try adjusting or resetting your filters.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFilters(DEFAULT_FILTERS)}
+            >
+              Reset filters
+            </Button>
+          </div>
+        )}
+
+        {/* Modals */}
+        <AddShirtModal
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          onSave={handleSave}
+          editingShirt={editing}
+        />
+        {canBulk && (
+          <>
+            <BulkAddModal />
+            <BulkJobBadge />
+          </>
+        )}
+        <ShirtDetailModal
+          shirt={selected}
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      </div>
+    </BulkJobProvider>
+  );
+}
+
+/**
+ * Opens the bulk review dialog. Lives outside `ShirtGrid` so it can read the
+ * job: while a batch is running the button reports it instead of starting a
+ * second one.
+ */
+function BulkAddButton({ disabled }: { disabled: boolean }) {
+  const job = useBulkJob();
+  const busy = job.status === "analyzing";
+
+  return (
+    <Button
+      size="lg"
+      variant="secondary"
+      onClick={() => job.setOpen(true)}
+      disabled={disabled && job.status === "idle"}
+      title={busy ? "A batch is being analyzed" : "Add several shirts at once"}
+    >
+      {busy ? (
+        <Loader2 className="h-5 w-5 animate-spin" />
+      ) : (
+        <Layers className="h-5 w-5" />
+      )}
+      <span className="hidden md:inline">
+        {busy ? "Analyzing…" : "Bulk add"}
+      </span>
+    </Button>
   );
 }

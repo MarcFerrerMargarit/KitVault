@@ -72,6 +72,8 @@ export interface CollectionLimit {
   used: number;
   /** `null` when unlimited. */
   remaining: number | null;
+  /** Whether the plan may add several shirts in one pass. */
+  bulkUpload: boolean;
 }
 
 interface CollectionLimitRow {
@@ -79,6 +81,7 @@ interface CollectionLimitRow {
   max_shirts: number | null;
   used: number;
   remaining: number | null;
+  bulk_upload: boolean | null;
 }
 
 /** Read the current user's collection allowance. `null` if unreadable. */
@@ -95,6 +98,7 @@ export async function fetchCollectionLimit(
     maxShirts: row.max_shirts,
     used: row.used,
     remaining: row.remaining,
+    bulkUpload: row.bulk_upload ?? false,
   };
 }
 

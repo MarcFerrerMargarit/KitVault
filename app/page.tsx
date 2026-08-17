@@ -9,6 +9,8 @@ import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/button";
 import { HeroBackdrop } from "@/components/landing/HeroBackdrop";
 import { KitMarquee } from "@/components/landing/KitMarquee";
+import { Pricing } from "@/components/landing/Pricing";
+import { fetchPlans } from "@/lib/plans";
 
 const GITHUB_URL = "https://github.com/MarcFerrerMargarit/KitVault";
 
@@ -44,7 +46,12 @@ const FEATURES = [
   },
 ];
 
-export default function LandingPage() {
+/** Plans change rarely; re-read them hourly rather than on every request. */
+export const revalidate = 3600;
+
+export default async function LandingPage() {
+  const plans = await fetchPlans();
+
   return (
     <div className="flex min-h-screen flex-col">
       {/* Header */}
@@ -52,6 +59,12 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Brand />
           <nav className="flex items-center gap-2">
+            <Link
+              href="#pricing"
+              className="mr-1 hidden text-sm text-muted transition-colors hover:text-ink sm:block"
+            >
+              Pricing
+            </Link>
             <Link href="/login">
               <Button variant="ghost" size="sm">
                 Login
@@ -83,8 +96,7 @@ export default function LandingPage() {
           >
             Your football shirt
             <br />
-            collection,{" "}
-            <span className="text-accent">finally organized</span>
+            collection, <span className="text-accent">finally organized</span>
           </h1>
           <p
             className="reveal mt-6 max-w-2xl text-base text-muted sm:text-lg"
@@ -155,6 +167,8 @@ export default function LandingPage() {
           })}
         </div>
       </section>
+
+      <Pricing plans={plans} />
 
       {/* CTA strip */}
       <section className="border-t border-border bg-surface/40">

@@ -3,7 +3,6 @@
 import * as React from "react";
 import { UploadCloud, Sparkles, Loader2, Info, ImagePlus } from "lucide-react";
 import type { Shirt, ShirtFormData } from "@/lib/types";
-import { COUNTRIES, LEAGUES, MANUFACTURERS, VERSIONS } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/client";
 import { prepareImages, thumbPath, type PreparedImages } from "@/lib/image";
 import { useQuota } from "@/components/QuotaProvider";
@@ -15,11 +14,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
-import { SuggestInput } from "@/components/ui/suggest-input";
-import { Label } from "@/components/ui/label";
+import { ShirtFields } from "@/components/ShirtFields";
 
 type Step = "upload" | "analyzing" | "form";
 
@@ -411,92 +406,7 @@ export function AddShirtModal({
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="team">Team name</Label>
-              <Input
-                id="team"
-                value={form.team}
-                onChange={(e) => update("team", e.target.value)}
-                placeholder="e.g. FC Barcelona"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="season">Season</Label>
-                <Input
-                  id="season"
-                  value={form.season}
-                  onChange={(e) => update("season", e.target.value)}
-                  placeholder="e.g. 2019-20"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="version">Version</Label>
-                <Select
-                  id="version"
-                  value={form.version}
-                  onChange={(e) =>
-                    update(
-                      "version",
-                      e.target.value as ShirtFormData["version"],
-                    )
-                  }
-                >
-                  {VERSIONS.map((v) => (
-                    <option key={v} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="country">Country</Label>
-                <SuggestInput
-                  id="country"
-                  options={COUNTRIES}
-                  value={form.country}
-                  onChange={(e) => update("country", e.target.value)}
-                  placeholder="e.g. Spain"
-                />
-              </div>
-              <div>
-                <Label htmlFor="league">League</Label>
-                <SuggestInput
-                  id="league"
-                  options={LEAGUES}
-                  value={form.league}
-                  onChange={(e) => update("league", e.target.value)}
-                  placeholder="e.g. LaLiga (empty if none)"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="manufacturer">Manufacturer</Label>
-              <SuggestInput
-                id="manufacturer"
-                options={MANUFACTURERS}
-                value={form.manufacturer}
-                onChange={(e) => update("manufacturer", e.target.value)}
-                placeholder="e.g. Nike"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="notes">Notes (optional)</Label>
-              <Textarea
-                id="notes"
-                value={form.notes}
-                onChange={(e) => update("notes", e.target.value)}
-                placeholder="Anything memorable about this shirt…"
-              />
-            </div>
+            <ShirtFields value={form} onChange={update} />
 
             {!isEditing && aiConfidence !== null && (
               <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/25 bg-accent-soft p-3 text-xs leading-relaxed text-accent">

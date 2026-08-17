@@ -44,6 +44,8 @@ Create a project at [supabase.com](https://supabase.com), then:
      functions; `/api/identify` returns 500 until it has been run.
    - `003_collection_limit_and_account_deletion.sql` — **required**. The
      per-plan collection limit and the account-deletion function.
+   - `004_plan_features_and_pricing.sql` — **required**. Bulk upload as a plan
+     feature, plan prices, and public read access for the pricing table.
 3. **Authentication → URL Configuration** → set the Site URL to
    `http://localhost:3000` and add `http://localhost:3000/auth/callback` to the
    redirect allow-list, so email confirmation links come back to the app.
@@ -119,8 +121,8 @@ project — but read the "when you start paying" note at the end first.
    the real domain and add `https://yourdomain.com/auth/callback` to the redirect
    allow-list. Otherwise confirmation links keep pointing at `localhost:3000`.
    No code change is needed — the app derives its origin from the request.
-7. **Run the migrations** against the production database (`schema.sql` if it is
-   a fresh project, then `001`, `002` and `003`). `/api/identify` returns 500
+7. **Run the migrations** against the production database (`schema.sql` if it
+   is a fresh project, then `001` through `004`). `/api/identify` returns 500
    until `002` has run, and the paywall does not exist until `003` has.
 8. **Check it end to end**: sign up with a real address, confirm, add a shirt
    with a photo, and watch the quota counter go down.
@@ -146,7 +148,7 @@ project when that starts to matter.
 
 | Route                | Description                                                       |
 | -------------------- | ----------------------------------------------------------------- |
-| `/`                  | Landing page — hero, kit marquee, CTAs                            |
+| `/`                  | Landing page — hero, kit marquee, pricing, CTAs                   |
 | `/login`, `/signup`  | Email + password auth (redirects to `/collection` when signed in) |
 | `/auth/callback`     | Exchanges the Supabase confirmation code for a session            |
 | `/collection`        | The collection — server-rendered from Postgres; auth-protected    |
@@ -241,17 +243,20 @@ Details worth knowing:
 
 ## Plans and limits
 
-Two different things are rationed, and they are easy to confuse:
+Different things are rationed, and they are easy to confuse:
 
 | Limit                      | What it protects                  | Where                               |
 | -------------------------- | --------------------------------- | ----------------------------------- |
 | Shirts per account         | The product — this is the paywall | `plan_limits.max_shirts`            |
 | AI identifications per day | The Gemini budget                 | `plan_limits.daily_identifications` |
+| Bulk upload                | A paid perk, not a cost           | `plan_limits.bulk_upload`           |
 
-Defaults: `free` holds **25 shirts** and 5 identifications a day; `pro` is
-unlimited shirts (`max_shirts is null`) and 100 a day. Change either with an
-`UPDATE` — no redeploy. There is no payment integration yet, so upgrades are
-manual:
+Defaults: `free` holds **25 shirts**, 5 identifications a day and no bulk
+upload; `pro` is unlimited shirts (`max_shirts is null`), 100 a day, bulk
+upload, at a **placeholder €4.99/month** — set your real price before launch.
+Change any of them with an `UPDATE`: no redeploy, and the landing page's
+pricing table follows, because it reads the same rows. There is no payment
+integration yet, so upgrades are manual:
 
 ```sql
 update public.profiles set plan = 'pro' where email = 'someone@example.com';
@@ -270,6 +275,40 @@ and only new inserts are refused.
 In the UI the allowance appears once the collection is more than half full, the
 Add button disables at the limit, and a failed insert cleans up the photo that
 was already uploaded so it does not sit in the user's storage forever.
+
+## Bulk upload (Pro)
+
+Plans with `bulk_upload` get a second button next to **Add shirt**: pick up to
+20 photos, let them all be identified, then walk the batch and correct anything
+wrong before saving. A filmstrip across the top shows every photo with a tick or
+a warning, so it is obvious which ones still need a team and a season — the save
+button stays disabled until none do.
+
+**The batch runs in the background.** Closing the review — backdrop click,
+Escape, the "Keep working" button — only hides it; the job lives in
+`BulkJobProvider`, above the dialog, so it keeps going. A floating badge reports
+progress, reopens the review on demand, and can cancel the batch. The tab title
+carries the progress too (`(3/12) Analyzing…`), so it is visible from another
+tab, and leaving the page while a batch is unsaved asks for confirmation —
+those identifications cost AI credits.
+
+The other parts that are not obvious:
+
+- **Photos are identified one at a time, paced ~1.2s apart.** The server's
+  per-minute burst guard exists to stay inside Gemini's requests-per-minute
+  ceiling, and firing 20 requests at once would trip it on most of them. If it
+  trips anyway, the batch waits it out and retries rather than failing the photo.
+- **A spent daily quota stops the calls early.** Once the API reports the
+  allowance is gone, the rest of the batch skips identification instead of
+  collecting 15 identical refusals; those photos are simply filled in by hand.
+- **Saving inserts row by row, not as one statement.** The collection limit is a
+  per-row trigger, so a single multi-row insert would roll the whole batch back
+  the moment the allowance ran out. One at a time, the shirts that fit are kept
+  and the user is told exactly how many were refused. Photos belonging to
+  refused shirts are deleted from storage rather than left orphaned.
+- The button is hidden for plans without the feature, but that is presentation
+  only. Nothing here is a security boundary: what costs money — AI credits and
+  collection size — is enforced in the database either way.
 
 ## Deleting an account
 
@@ -386,15 +425,20 @@ components/
   AiQuotaBadge.tsx         # "3/5 AI left today" counter in the header
   QuotaProvider.tsx        # Shares the quota between header and modal
   CollectionMap.tsx        # Choropleth world map + country ranking
+  BulkAddModal.tsx         # Pro: the batch review dialog
+  BulkJobProvider.tsx      # The batch itself — outlives the dialog
+  BulkJobBadge.tsx         # Floating progress pill for a background batch
+  ShirtFields.tsx          # The editable shirt fields, shared by both flows
   DeleteAccountDialog.tsx  # GDPR account deletion, confirmed by email
   auth/AuthForm.tsx        # Shared login / signup form
-  landing/                 # HeroBackdrop, KitMarquee
+  landing/                 # HeroBackdrop, KitMarquee, Pricing
   ui/                      # Button, Card, Dialog, Select, Input, Badge, …
 lib/
   supabase/                # Browser, server and middleware clients
   db.ts                    # `shirts` row shape + row → domain mapper
   quota.ts                 # Quota types, RPC reader, refusal messages
   image.ts                 # Browser-side downscaling + thumbnail paths
+  plans.ts                 # Public plan catalogue for the pricing table
   world-map.ts             # Projects the country outlines (server only)
   country-match.ts         # Free-text country → map country
   types.ts                 # Domain types
@@ -448,6 +492,8 @@ Tokens live in `app/globals.css` under `@theme` (e.g. `bg-bg`, `text-accent`,
   is already collecting the data)
 - ✅ **Phase 3.7** — Per-plan collection limit + account deletion (see
   [Plans and limits](#plans-and-limits))
+- ✅ **Phase 3.8** — Bulk upload for paid plans + a pricing table on the landing
+  page driven by `plan_limits` (see [Bulk upload](#bulk-upload-pro))
 - 🔜 **Phase 6** — Social profiles, collection stats, PWA
 
 ### Before charging anyone

@@ -93,6 +93,83 @@ export async function createShirt(
   return {};
 }
 
+/** One shirt in a bulk save, already uploaded. */
+export interface BulkShirtInput {
+  data: ShirtFormData;
+  teamColor: string;
+  imagePath?: string | null;
+  prediction?: Record<string, unknown> | null;
+}
+
+export interface BulkResult {
+  saved: number;
+  /** Per-item failures, so the user learns which shirts did not make it. */
+  failures: { index: number; team: string; error: string }[];
+  /** True when at least one failure was the plan's collection limit. */
+  collectionFull?: boolean;
+}
+
+/**
+ * Save several shirts in one go (bulk mode).
+ *
+ * Inserted one at a time on purpose: the collection limit is a per-row
+ * trigger, so a single multi-row insert would roll the whole batch back when
+ * the allowance runs out mid-way. Row by row, the shirts that fit are kept and
+ * the user is told exactly which ones were refused.
+ */
+export async function createShirts(
+  items: BulkShirtInput[],
+): Promise<BulkResult> {
+  const failures: BulkResult["failures"] = [];
+  let saved = 0;
+  let collectionFull = false;
+
+  for (const [index, item] of items.entries()) {
+    const res = await createShirt(
+      item.data,
+      item.teamColor,
+      item.imagePath,
+      item.prediction,
+    );
+    if (res.error) {
+      failures.push({
+        index,
+        team: item.data.team.trim() || "Untitled",
+        error: res.error,
+      });
+      if (res.collectionFull) collectionFull = true;
+      // Once the collection is full the rest cannot fit either; stop rather
+      // than firing a doomed insert per remaining shirt.
+      if (res.collectionFull) {
+        for (const [restIndex, rest] of items.slice(index + 1).entries()) {
+          failures.push({
+            index: index + 1 + restIndex,
+            team: rest.data.team.trim() || "Untitled",
+            error: "Not saved — your collection is full.",
+          });
+          if (rest.imagePath) {
+            await supabaseRemove(rest.imagePath);
+          }
+        }
+        break;
+      }
+    } else {
+      saved += 1;
+    }
+  }
+
+  revalidatePath("/collection");
+  return { saved, failures, collectionFull };
+}
+
+/** Drop an uploaded photo (and its thumbnail) that will never get a row. */
+async function supabaseRemove(imagePath: string) {
+  const supabase = await createClient();
+  await supabase.storage
+    .from("shirts")
+    .remove([imagePath, thumbPath(imagePath)]);
+}
+
 /** Update one of the current user's shirts. RLS restricts this to the owner. */
 export async function updateShirt(
   id: string,
