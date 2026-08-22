@@ -85,7 +85,7 @@ export default async function UpgradePage() {
               </p>
             </section>
 
-            <Pricing plans={plans} />
+            <Pricing plans={plans} variant="compare" />
 
             <section className="mx-auto w-full max-w-md px-4 pb-20 sm:px-6">
               {/* Honest about the state of things: the plan exists, the

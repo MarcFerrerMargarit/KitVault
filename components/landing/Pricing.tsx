@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Check, Sparkles } from "lucide-react";
-import { planPerks, type Plan } from "@/lib/plans";
+import { Check, Clock, Sparkles } from "lucide-react";
+import { PAYMENTS_ENABLED, planPerks, type Plan } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 
 /** Format a monthly price the way a collector expects to read it. */
@@ -9,22 +9,44 @@ function price(plan: Plan) {
   return `€${plan.priceMonthlyEur.toFixed(2).replace(/\.00$/, "")}`;
 }
 
+interface PricingProps {
+  plans: Plan[];
+  /**
+   * "landing" shows a call to action per plan. "compare" drops them — on
+   * `/upgrade` the single waiting-list button below is the only action, and a
+   * second one on the card would just compete with it.
+   */
+  variant?: "landing" | "compare";
+}
+
 /**
  * Pricing table. The numbers come from `plan_limits`, the same rows the
  * database enforces, so the marketing copy cannot promise what the app
  * refuses.
+ *
+ * A paid plan is dimmed while {@link PAYMENTS_ENABLED} is false: it is real,
+ * it is coming, but nobody can buy it yet, and a bright "Get Pro" button that
+ * leads nowhere is worse than saying so.
  */
-export function Pricing({ plans }: { plans: Plan[] }) {
-  // The most expensive plan is the highlighted one.
-  const featuredId = plans.reduce(
-    (best, plan) => (plan.priceMonthlyEur > best.priceMonthlyEur ? plan : best),
-    plans[0],
-  )?.id;
+export function Pricing({ plans, variant = "landing" }: PricingProps) {
+  const locked = (plan: Plan) => !PAYMENTS_ENABLED && plan.priceMonthlyEur > 0;
+
+  // The most expensive plan is the highlighted one — but only once plans can
+  // be bought. With payments closed there is nothing to recommend: promoting
+  // the locked plan fights with greying it out, and promoting Free as "most
+  // complete" would be a lie, since it is precisely the smaller one.
+  const featuredId = PAYMENTS_ENABLED
+    ? plans.reduce(
+        (best, plan) =>
+          plan.priceMonthlyEur > best.priceMonthlyEur ? plan : best,
+        plans[0],
+      )?.id
+    : undefined;
 
   return (
     <section
       id="pricing"
-      className="border-t border-border bg-surface/40 scroll-mt-16"
+      className="scroll-mt-16 border-t border-border bg-surface/40"
     >
       <div className="mx-auto w-full max-w-4xl px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
@@ -38,14 +60,18 @@ export function Pricing({ plans }: { plans: Plan[] }) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           {plans.map((plan) => {
+            const isLocked = locked(plan);
             const featured = plan.id === featuredId;
+
             return (
               <div
                 key={plan.id}
-                className={`relative flex flex-col rounded-[var(--radius)] border bg-surface p-6 ${
+                className={`relative flex flex-col rounded-[var(--radius)] border p-6 ${
                   featured
-                    ? "border-accent/50 shadow-[0_0_0_1px_rgba(74,222,128,0.15)]"
-                    : "border-border"
+                    ? "border-accent/50 bg-surface shadow-[0_0_0_1px_rgba(74,222,128,0.15)]"
+                    : isLocked
+                      ? "border-border bg-surface/50"
+                      : "border-border bg-surface"
                 }`}
               >
                 {featured && (
@@ -54,8 +80,18 @@ export function Pricing({ plans }: { plans: Plan[] }) {
                     Most complete
                   </span>
                 )}
+                {isLocked && (
+                  <span className="absolute -top-2.5 left-6 inline-flex items-center gap-1 rounded-[3px] border border-border-strong bg-surface-2 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-muted">
+                    <Clock className="h-3 w-3" />
+                    Coming soon
+                  </span>
+                )}
 
-                <h3 className="font-display text-2xl font-bold uppercase tracking-wide text-white">
+                <h3
+                  className={`font-display text-2xl font-bold uppercase tracking-wide ${
+                    isLocked ? "text-muted" : "text-white"
+                  }`}
+                >
                   {plan.label}
                 </h3>
                 {plan.tagline && (
@@ -63,11 +99,15 @@ export function Pricing({ plans }: { plans: Plan[] }) {
                 )}
 
                 <div className="mt-5 flex items-baseline gap-1.5">
-                  <span className="font-display text-4xl font-bold text-white">
+                  <span
+                    className={`font-display text-4xl font-bold ${
+                      isLocked ? "text-muted" : "text-white"
+                    }`}
+                  >
                     {price(plan)}
                   </span>
                   {plan.priceMonthlyEur > 0 && (
-                    <span className="text-sm text-muted">/ month</span>
+                    <span className="text-sm text-muted-2">/ month</span>
                   )}
                 </div>
 
@@ -79,29 +119,39 @@ export function Pricing({ plans }: { plans: Plan[] }) {
                           featured ? "text-accent" : "text-muted-2"
                         }`}
                       />
-                      <span className="text-ink">{perk}</span>
+                      <span className={isLocked ? "text-muted" : "text-ink"}>
+                        {perk}
+                      </span>
                     </li>
                   ))}
                 </ul>
 
-                <Link href="/signup" className="mt-6">
-                  <Button
-                    variant={featured ? "primary" : "secondary"}
-                    className="w-full"
+                {variant === "landing" && (
+                  <Link
+                    href={isLocked ? "/upgrade" : "/signup"}
+                    className="mt-6"
                   >
-                    {plan.priceMonthlyEur === 0
-                      ? "Start free"
-                      : `Get ${plan.label}`}
-                  </Button>
-                </Link>
+                    <Button
+                      variant={featured ? "primary" : "secondary"}
+                      className="w-full"
+                    >
+                      {isLocked
+                        ? "Notify me when it's ready"
+                        : plan.priceMonthlyEur === 0
+                          ? "Start free"
+                          : `Get ${plan.label}`}
+                    </Button>
+                  </Link>
+                )}
               </div>
             );
           })}
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-2">
-          Every plan starts on Free — upgrading is a one-click change once
-          payments are live.
+          {PAYMENTS_ENABLED
+            ? "Every plan starts on Free — upgrading is a one-click change."
+            : "Paid plans aren't open yet. Everything on Free works today, and nothing is charged to anyone."}
         </p>
       </div>
     </section>

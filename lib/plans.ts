@@ -1,5 +1,14 @@
 import { createPublicClient } from "@/lib/supabase/public";
 
+/**
+ * Whether a paid plan can actually be bought yet.
+ *
+ * While this is false, paid plans are shown but greyed out and their call to
+ * action joins the waiting list instead of pretending to sell. Flip it once a
+ * checkout exists — it is the only switch that needs changing.
+ */
+export const PAYMENTS_ENABLED = false;
+
 /** A plan as advertised on the landing page. */
 export interface Plan {
   id: string;
