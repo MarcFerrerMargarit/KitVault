@@ -62,7 +62,10 @@ export default async function CollectionPage() {
   return (
     <QuotaProvider initial={quota}>
       <div className="flex min-h-screen flex-col">
-        <CollectionHeader email={user.email ?? "account"} />
+        <CollectionHeader
+          email={user.email ?? "account"}
+          plan={collectionLimit?.plan ?? null}
+        />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
           <ShirtGrid initialShirts={shirts} collectionLimit={collectionLimit} />
         </main>

@@ -46,6 +46,7 @@ Create a project at [supabase.com](https://supabase.com), then:
      per-plan collection limit and the account-deletion function.
    - `004_plan_features_and_pricing.sql` — **required**. Bulk upload as a plan
      feature, plan prices, and public read access for the pricing table.
+   - `005_upgrade_interest.sql` — **required**. The upgrade waiting list.
 3. **Authentication → URL Configuration** → set the Site URL to
    `http://localhost:3000` and add `http://localhost:3000/**` to the redirect
    allow-list. The wildcard matters: password-reset links come back as
@@ -124,7 +125,7 @@ project — but read the "when you start paying" note at the end first.
    allow-list. Otherwise confirmation links keep pointing at `localhost:3000`.
    No code change is needed — the app derives its origin from the request.
 7. **Run the migrations** against the production database (`schema.sql` if it
-   is a fresh project, then `001` through `004`). `/api/identify` returns 500
+   is a fresh project, then `001` through `005`). `/api/identify` returns 500
    until `002` has run, and the paywall does not exist until `003` has.
 8. **Check it end to end**: sign up with a real address, confirm, add a shirt
    with a photo, watch the quota counter go down — then log out, use
@@ -153,6 +154,7 @@ project when that starts to matter.
 | -------------------- | ----------------------------------------------------------------- |
 | `/`                  | Landing page — hero, kit marquee, pricing, CTAs                   |
 | `/login`, `/signup`  | Email + password auth (redirects to `/collection` when signed in) |
+| `/upgrade`           | Plan comparison + the upgrade waiting list (auth-protected)       |
 | `/forgot-password`   | Request a password-reset link                                     |
 | `/update-password`   | Set a new password after following that link                      |
 | `/auth/callback`     | Exchanges the Supabase confirmation code for a session            |
@@ -328,6 +330,25 @@ integration yet, so upgrades are manual:
 update public.profiles set plan = 'pro' where email = 'someone@example.com';
 ```
 
+### Which plan am I on?
+
+A chip in the collection header says so at all times, and the account menu
+repeats it. On the free plan the chip is a link to `/upgrade`, which compares
+the plans and shows how much of the allowance is already used.
+
+**Payments are not wired up.** Rather than an Upgrade button that does nothing,
+`/upgrade` records interest in `upgrade_interest` — which doubles as the one
+number worth having before paying for Vercel Pro and Supabase Pro:
+
+```sql
+select u.email, i.created_at
+  from public.upgrade_interest i
+  join auth.users u on u.id = i.user_id
+ order by i.created_at desc;
+```
+
+Upgrades are still applied by hand (`update public.profiles set plan = 'pro' …`).
+
 **The collection limit is enforced by a trigger on `shirts`, not by the Server
 Action.** It has to be: users hold a valid session and the anon key, so they can
 POST straight to PostgREST and insert rows without going through the app at all,
@@ -496,6 +517,8 @@ components/
   BulkJobBadge.tsx         # Floating progress pill for a background batch
   ShirtFields.tsx          # The editable shirt fields, shared by both flows
   DeleteAccountDialog.tsx  # GDPR account deletion, confirmed by email
+  PlanBadge.tsx            # Free/Pro chip in the header; free links to /upgrade
+  UpgradeInterest.tsx      # Joins the waiting list
   auth/AuthForm.tsx        # Shared login / signup form
   auth/ForgotPasswordForm.tsx  # Request a reset link
   auth/UpdatePasswordForm.tsx  # Set the new password
