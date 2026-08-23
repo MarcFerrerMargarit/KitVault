@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { fill } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +22,7 @@ const MIN_LENGTH = 6;
  */
 export function UpdatePasswordForm() {
   const router = useRouter();
+  const { t } = useI18n();
   const [password, setPassword] = React.useState("");
   const [confirm, setConfirm] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -61,7 +64,7 @@ export function UpdatePasswordForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password !== confirm) {
-      setError("The two passwords do not match.");
+      setError(t.updatePassword.mismatch);
       return;
     }
     setLoading(true);
@@ -92,17 +95,14 @@ export function UpdatePasswordForm() {
     return (
       <div className="flex flex-col items-center gap-3 text-center">
         <h1 className="font-display text-2xl font-bold uppercase tracking-wide text-white">
-          Link expired
+          {t.updatePassword.expiredTitle}
         </h1>
-        <p className="text-sm text-muted">
-          This reset link is no longer valid — they can only be used once, and
-          they expire after an hour.
-        </p>
+        <p className="text-sm text-muted">{t.updatePassword.expiredBody}</p>
         <Link
           href="/forgot-password"
           className="mt-2 text-sm font-medium text-accent hover:underline"
         >
-          Send a new one
+          {t.updatePassword.sendNew}
         </Link>
       </div>
     );
@@ -115,13 +115,11 @@ export function UpdatePasswordForm() {
           <ShieldCheck className="h-6 w-6" />
         </div>
         <h1 className="font-display text-2xl font-bold uppercase tracking-wide text-white">
-          Password updated
+          {t.updatePassword.doneTitle}
         </h1>
-        <p className="text-sm text-muted">
-          You are signed in with your new password.
-        </p>
+        <p className="text-sm text-muted">{t.updatePassword.doneBody}</p>
         <Link href="/collection" className="mt-2">
-          <Button size="lg">Go to my collection</Button>
+          <Button size="lg">{t.updatePassword.goToCollection}</Button>
         </Link>
       </div>
     );
@@ -131,15 +129,15 @@ export function UpdatePasswordForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="text-center">
         <h1 className="font-display text-2xl font-bold uppercase tracking-wide text-white">
-          Set a new password
+          {t.updatePassword.title}
         </h1>
         <p className="mt-1 text-sm text-muted">
-          At least {MIN_LENGTH} characters.
+          {fill(t.updatePassword.subtitle, { min: MIN_LENGTH })}
         </p>
       </div>
 
       <div>
-        <Label htmlFor="password">New password</Label>
+        <Label htmlFor="password">{t.updatePassword.newPassword}</Label>
         <Input
           id="password"
           type="password"
@@ -153,7 +151,7 @@ export function UpdatePasswordForm() {
       </div>
 
       <div>
-        <Label htmlFor="confirm">Repeat new password</Label>
+        <Label htmlFor="confirm">{t.updatePassword.repeat}</Label>
         <Input
           id="confirm"
           type="password"
@@ -174,7 +172,7 @@ export function UpdatePasswordForm() {
 
       <Button type="submit" size="lg" disabled={loading} className="mt-1">
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        Update password
+        {t.updatePassword.cta}
       </Button>
     </form>
   );

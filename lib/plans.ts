@@ -1,4 +1,6 @@
 import { createPublicClient } from "@/lib/supabase/public";
+import { fill } from "@/lib/i18n/format";
+import type { Messages } from "@/lib/i18n/messages/en";
 
 /**
  * Whether a paid plan can actually be bought yet.
@@ -87,17 +89,16 @@ export async function fetchPlans(): Promise<Plan[]> {
   }
 }
 
-/** The bullet list shown under a plan's price. */
-export function planPerks(plan: Plan): string[] {
+/** The bullet list shown under a plan's price, in the reader's language. */
+export function planPerks(plan: Plan, t: Messages): string[] {
+  const perks = t.pricing.perks;
   return [
     plan.maxShirts === null
-      ? "Unlimited shirts"
-      : `Up to ${plan.maxShirts} shirts`,
-    `${plan.dailyIdentifications} AI identifications a day`,
-    plan.bulkUpload
-      ? "Bulk upload — add a whole batch at once"
-      : "Add shirts one at a time",
-    "Interactive collection map",
-    "Filters, search and collection stats",
+      ? perks.shirtsUnlimited
+      : fill(perks.shirtsLimited, { count: plan.maxShirts }),
+    fill(perks.identifications, { count: plan.dailyIdentifications }),
+    plan.bulkUpload ? perks.bulkYes : perks.bulkNo,
+    perks.map,
+    perks.filters,
   ];
 }

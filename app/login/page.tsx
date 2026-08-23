@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Brand } from "@/components/Brand";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { AuthForm } from "@/components/auth/AuthForm";
 
 export default function LoginPage() {
@@ -13,6 +14,7 @@ export default function LoginPage() {
           <AuthForm mode="login" />
         </Suspense>
       </div>
+      <LocaleSwitcher className="mt-8" />
     </div>
   );
 }

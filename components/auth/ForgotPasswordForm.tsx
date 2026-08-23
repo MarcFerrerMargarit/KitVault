@@ -4,6 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { Loader2, MailCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { fill } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +18,7 @@ import { Label } from "@/components/ui/label";
  * silently signed in and never asked for a new password.
  */
 export function ForgotPasswordForm() {
+  const { t } = useI18n();
   const [email, setEmail] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [sent, setSent] = React.useState(false);
@@ -57,17 +60,16 @@ export function ForgotPasswordForm() {
           <MailCheck className="h-6 w-6" />
         </div>
         <h1 className="font-display text-2xl font-bold uppercase tracking-wide text-white">
-          Check your email
+          {t.forgotPassword.sentTitle}
         </h1>
         <p className="text-sm text-muted">
-          If <span className="text-ink">{email}</span> has an account, a link to
-          set a new password is on its way. It expires in an hour.
+          {fill(t.forgotPassword.sentBody, { email })}
         </p>
         <Link
           href="/login"
           className="mt-2 text-sm font-medium text-accent hover:underline"
         >
-          Back to login
+          {t.forgotPassword.backToLogin}
         </Link>
       </div>
     );
@@ -77,15 +79,13 @@ export function ForgotPasswordForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="text-center">
         <h1 className="font-display text-2xl font-bold uppercase tracking-wide text-white">
-          Forgot your password?
+          {t.forgotPassword.title}
         </h1>
-        <p className="mt-1 text-sm text-muted">
-          We&apos;ll email you a link to set a new one.
-        </p>
+        <p className="mt-1 text-sm text-muted">{t.forgotPassword.subtitle}</p>
       </div>
 
       <div>
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{t.auth.email}</Label>
         <Input
           id="email"
           type="email"
@@ -93,7 +93,7 @@ export function ForgotPasswordForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
+          placeholder={t.auth.emailPlaceholder}
         />
       </div>
 
@@ -105,13 +105,13 @@ export function ForgotPasswordForm() {
 
       <Button type="submit" size="lg" disabled={loading} className="mt-1">
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        Send reset link
+        {t.forgotPassword.cta}
       </Button>
 
       <p className="text-center text-sm text-muted">
-        Remembered it?{" "}
+        {t.forgotPassword.remembered}{" "}
         <Link href="/login" className="font-medium text-accent hover:underline">
-          Log in
+          {t.forgotPassword.login}
         </Link>
       </p>
     </form>

@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { HeroBackdrop } from "@/components/landing/HeroBackdrop";
 import { KitMarquee } from "@/components/landing/KitMarquee";
 import { Pricing } from "@/components/landing/Pricing";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { fetchPlans } from "@/lib/plans";
+import { getTranslations } from "@/lib/i18n/server";
 
 const GITHUB_URL = "https://github.com/MarcFerrerMargarit/KitVault";
 
@@ -28,29 +30,14 @@ function GithubIcon({ className }: { className?: string }) {
   );
 }
 
-const FEATURES = [
-  {
-    icon: ScanSearch,
-    title: "AI identification",
-    body: "Snap a photo and KitVault recognises the team, season, version and manufacturer automatically — no manual data entry.",
-  },
-  {
-    icon: SlidersHorizontal,
-    title: "Filter & search",
-    body: "Slice your collection by country, league, season or version in real time. Find any shirt in seconds.",
-  },
-  {
-    icon: Share2,
-    title: "Share your collection",
-    body: "Show off your vault. Share your collection with friends and discover the kits other collectors are hunting down.",
-  },
-];
+const FEATURE_ICONS = [ScanSearch, SlidersHorizontal, Share2] as const;
 
 /** Plans change rarely; re-read them hourly rather than on every request. */
 export const revalidate = 3600;
 
 export default async function LandingPage() {
-  const plans = await fetchPlans();
+  const [plans, { t }] = await Promise.all([fetchPlans(), getTranslations()]);
+  const features = [t.features.identify, t.features.filter, t.features.share];
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -63,16 +50,16 @@ export default async function LandingPage() {
               href="#pricing"
               className="mr-1 hidden text-sm text-muted transition-colors hover:text-ink sm:block"
             >
-              Pricing
+              {t.nav.pricing}
             </Link>
             <Link href="/login">
               <Button variant="ghost" size="sm">
-                Login
+                {t.nav.login}
               </Button>
             </Link>
             <Link href="/signup">
               <Button variant="primary" size="sm">
-                Sign up
+                {t.nav.signup}
               </Button>
             </Link>
           </nav>
@@ -88,23 +75,22 @@ export default async function LandingPage() {
             style={{ animationDelay: "0ms" }}
           >
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-            Collect &middot; Organize &middot; Share
+            {t.hero.eyebrow}
           </span>
           <h1
             className="reveal font-display text-5xl font-bold uppercase leading-[0.95] tracking-tight text-white sm:text-7xl"
             style={{ animationDelay: "90ms" }}
           >
-            Your football shirt
+            {t.hero.titleLine1}
             <br />
-            collection, <span className="text-accent">finally organized</span>
+            {t.hero.titleLine2}{" "}
+            <span className="text-accent">{t.hero.titleAccent}</span>
           </h1>
           <p
             className="reveal mt-6 max-w-2xl text-base text-muted sm:text-lg"
             style={{ animationDelay: "180ms" }}
           >
-            KitVault is the home for your kits. Catalogue every shirt with AI,
-            keep your archive perfectly organised, and share your collection
-            with fellow collectors around the world.
+            {t.hero.body}
           </p>
           <div
             className="reveal mt-9 flex flex-col items-center gap-3 sm:flex-row"
@@ -112,13 +98,13 @@ export default async function LandingPage() {
           >
             <Link href="/signup">
               <Button size="lg">
-                Get started free
+                {t.hero.ctaPrimary}
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </Link>
             <Link href="/login">
               <Button size="lg" variant="outline">
-                Log in
+                {t.hero.ctaSecondary}
               </Button>
             </Link>
           </div>
@@ -137,16 +123,13 @@ export default async function LandingPage() {
       <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
           <h2 className="font-display text-3xl font-bold uppercase tracking-wide text-white sm:text-4xl">
-            Built for collectors
+            {t.features.title}
           </h2>
-          <p className="mt-3 text-muted">
-            Everything you need to catalogue — and show off — a serious shirt
-            collection.
-          </p>
+          <p className="mt-3 text-muted">{t.features.subtitle}</p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {FEATURES.map((feature) => {
-            const Icon = feature.icon;
+          {features.map((feature, index) => {
+            const Icon = FEATURE_ICONS[index];
             return (
               <div
                 key={feature.title}
@@ -174,14 +157,12 @@ export default async function LandingPage() {
       <section className="border-t border-border bg-surface/40">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-5 px-4 py-16 text-center sm:px-6">
           <h2 className="font-display text-3xl font-bold uppercase tracking-wide text-white sm:text-4xl">
-            Start your vault today
+            {t.cta.title}
           </h2>
-          <p className="max-w-xl text-muted">
-            Free to start. Add your first shirt in under a minute.
-          </p>
+          <p className="max-w-xl text-muted">{t.cta.body}</p>
           <Link href="/signup">
             <Button size="lg">
-              Get started free
+              {t.cta.button}
               <ArrowRight className="h-5 w-5" />
             </Button>
           </Link>
@@ -191,10 +172,12 @@ export default async function LandingPage() {
       {/* Footer */}
       <footer className="mt-auto border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
-          <Brand />
+          <div className="flex items-center gap-4">
+            <Brand />
+            <LocaleSwitcher />
+          </div>
           <p className="text-xs text-muted-2">
-            © {new Date().getFullYear()} KitVault. A prototype for football
-            shirt collectors.
+            © {new Date().getFullYear()} KitVault. {t.footer.tagline}
           </p>
           <a
             href={GITHUB_URL}
@@ -203,7 +186,7 @@ export default async function LandingPage() {
             className="flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-ink"
           >
             <GithubIcon className="h-4 w-4" />
-            View on GitHub
+            {t.footer.github}
           </a>
         </div>
       </footer>

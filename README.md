@@ -17,6 +17,7 @@ AI identify it, and build a clean, private archive of every jersey you own.
 - **Tailwind CSS v4** (dark-only design system)
 - **TypeScript** (strict, no `any`)
 - **d3-geo** + **world-atlas** for the collection map (server-side projection)
+- English + Spanish, via a typed dictionary in `lib/i18n` (no library)
 - **Lucide React** icons, shadcn/ui-style primitives built locally in `components/ui`
 
 ## Setup
@@ -180,6 +181,35 @@ project when that starts to matter.
    data for Phase 5.
 5. `/collection` mints 1-hour signed URLs for the photos, since the bucket is
    private.
+
+## Languages
+
+The interface is available in **English and Spanish**, chosen by cookie rather
+than by URL — `/collection` is the same address in both.
+
+- `lib/i18n/messages/en.ts` is the source of truth; `es.ts` is declared as
+  `Messages`, so **omitting or misspelling a key is a build error** rather than
+  an English string surfacing on a Spanish page. That guarantee is why this is a
+  typed dictionary and not a library keyed by strings.
+- `en.ts` is deliberately not `as const`: literal types would make every value
+  its own type and "Precios" would fail to satisfy "Pricing".
+- Detection order: the cookie, then `Accept-Language`, then English.
+- The switcher writes the cookie and calls `router.refresh()`. The pages are
+  server-rendered from the cookie, so the language has to change on the server;
+  swapping strings on the client would leave `<html lang>` and the markup lying.
+- Supabase reports auth failures in English from its own servers.
+  `lib/i18n/auth-errors.ts` matches the handful users actually hit and replaces
+  them, falling back to Supabase's wording if it ever changes.
+
+**What this costs:** reading a cookie in the root layout opts every page into
+dynamic rendering, so the landing page is no longer statically cached. That is
+inherent to choosing the language by cookie — one HTML document cannot be
+correct for two languages.
+
+**Not translated yet:** the collection itself (grid, modals, map, bulk upload),
+and the Supabase email templates, which are edited in the dashboard and have no
+per-user language. Shirt data — team, country and league names — stays as
+entered, and the map's country names come from Natural Earth in English.
 
 ## The map view
 

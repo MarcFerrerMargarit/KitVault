@@ -1,4 +1,5 @@
 import { Brand } from "@/components/Brand";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
 
 export const metadata = {
@@ -14,6 +15,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-sm rounded-[var(--radius)] border border-border bg-surface p-6 sm:p-8">
         <ForgotPasswordForm />
       </div>
+      <LocaleSwitcher className="mt-8" />
     </div>
   );
 }

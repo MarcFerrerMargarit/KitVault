@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Check, Clock, Sparkles } from "lucide-react";
 import { PAYMENTS_ENABLED, planPerks, type Plan } from "@/lib/plans";
+import { fill } from "@/lib/i18n/format";
+import { getTranslations } from "@/lib/i18n/server";
 import { Button } from "@/components/ui/button";
 
 /** Format a monthly price the way a collector expects to read it. */
-function price(plan: Plan) {
-  if (plan.priceMonthlyEur === 0) return "Free";
+function price(plan: Plan, freeLabel: string) {
+  if (plan.priceMonthlyEur === 0) return freeLabel;
   return `€${plan.priceMonthlyEur.toFixed(2).replace(/\.00$/, "")}`;
 }
 
@@ -28,7 +30,8 @@ interface PricingProps {
  * it is coming, but nobody can buy it yet, and a bright "Get Pro" button that
  * leads nowhere is worse than saying so.
  */
-export function Pricing({ plans, variant = "landing" }: PricingProps) {
+export async function Pricing({ plans, variant = "landing" }: PricingProps) {
+  const { t } = await getTranslations();
   const locked = (plan: Plan) => !PAYMENTS_ENABLED && plan.priceMonthlyEur > 0;
 
   // The most expensive plan is the highlighted one — but only once plans can
@@ -51,11 +54,9 @@ export function Pricing({ plans, variant = "landing" }: PricingProps) {
       <div className="mx-auto w-full max-w-4xl px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
           <h2 className="font-display text-3xl font-bold uppercase tracking-wide text-white sm:text-4xl">
-            Simple pricing
+            {t.pricing.title}
           </h2>
-          <p className="mt-3 text-muted">
-            Start free. Upgrade when your collection outgrows it.
-          </p>
+          <p className="mt-3 text-muted">{t.pricing.subtitle}</p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -77,13 +78,13 @@ export function Pricing({ plans, variant = "landing" }: PricingProps) {
                 {featured && (
                   <span className="absolute -top-2.5 left-6 inline-flex items-center gap-1 rounded-[3px] bg-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-bg">
                     <Sparkles className="h-3 w-3" />
-                    Most complete
+                    {t.pricing.mostComplete}
                   </span>
                 )}
                 {isLocked && (
                   <span className="absolute -top-2.5 left-6 inline-flex items-center gap-1 rounded-[3px] border border-border-strong bg-surface-2 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-muted">
                     <Clock className="h-3 w-3" />
-                    Coming soon
+                    {t.pricing.comingSoon}
                   </span>
                 )}
 
@@ -104,15 +105,17 @@ export function Pricing({ plans, variant = "landing" }: PricingProps) {
                       isLocked ? "text-muted" : "text-white"
                     }`}
                   >
-                    {price(plan)}
+                    {price(plan, t.pricing.free)}
                   </span>
                   {plan.priceMonthlyEur > 0 && (
-                    <span className="text-sm text-muted-2">/ month</span>
+                    <span className="text-sm text-muted-2">
+                      {t.pricing.perMonth}
+                    </span>
                   )}
                 </div>
 
                 <ul className="mt-6 flex-1 space-y-2.5">
-                  {planPerks(plan).map((perk) => (
+                  {planPerks(plan, t).map((perk) => (
                     <li key={perk} className="flex items-start gap-2 text-sm">
                       <Check
                         className={`mt-0.5 h-4 w-4 shrink-0 ${
@@ -136,10 +139,10 @@ export function Pricing({ plans, variant = "landing" }: PricingProps) {
                       className="w-full"
                     >
                       {isLocked
-                        ? "Notify me when it's ready"
+                        ? t.pricing.ctaNotify
                         : plan.priceMonthlyEur === 0
-                          ? "Start free"
-                          : `Get ${plan.label}`}
+                          ? t.pricing.ctaStartFree
+                          : fill(t.pricing.ctaGet, { plan: plan.label })}
                     </Button>
                   </Link>
                 )}
@@ -149,9 +152,7 @@ export function Pricing({ plans, variant = "landing" }: PricingProps) {
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-2">
-          {PAYMENTS_ENABLED
-            ? "Every plan starts on Free — upgrading is a one-click change."
-            : "Paid plans aren't open yet. Everything on Free works today, and nothing is charged to anyone."}
+          {PAYMENTS_ENABLED ? t.pricing.footnoteOpen : t.pricing.footnoteClosed}
         </p>
       </div>
     </section>

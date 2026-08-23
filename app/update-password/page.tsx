@@ -1,4 +1,5 @@
 import { Brand } from "@/components/Brand";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { UpdatePasswordForm } from "@/components/auth/UpdatePasswordForm";
 
 export const metadata = {
@@ -14,6 +15,7 @@ export default function UpdatePasswordPage() {
       <div className="w-full max-w-sm rounded-[var(--radius)] border border-border bg-surface p-6 sm:p-8">
         <UpdatePasswordForm />
       </div>
+      <LocaleSwitcher className="mt-8" />
     </div>
   );
 }

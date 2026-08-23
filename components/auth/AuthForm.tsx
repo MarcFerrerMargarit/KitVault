@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, MailCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { fill } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
+import { translateAuthError } from "@/lib/i18n/auth-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,37 +18,13 @@ interface AuthFormProps {
   mode: Mode;
 }
 
-const COPY: Record<
-  Mode,
-  {
-    title: string;
-    cta: string;
-    altText: string;
-    altHref: string;
-    altLink: string;
-  }
-> = {
-  login: {
-    title: "Welcome back",
-    cta: "Log in",
-    altText: "Don't have an account?",
-    altHref: "/signup",
-    altLink: "Sign up",
-  },
-  signup: {
-    title: "Create your vault",
-    cta: "Sign up",
-    altText: "Already have an account?",
-    altHref: "/login",
-    altLink: "Log in",
-  },
-};
-
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/collection";
-  const copy = COPY[mode];
+  const { t } = useI18n();
+  const copy = t.auth[mode];
+  const altHref = mode === "login" ? "/signup" : "/login";
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -56,8 +35,8 @@ export function AuthForm({ mode }: AuthFormProps) {
     const fromCallback = searchParams.get("error");
     if (!fromCallback) return null;
     return fromCallback === "auth"
-      ? "That link is no longer valid. Request a new one below."
-      : fromCallback;
+      ? t.auth.linkInvalid
+      : translateAuthError(fromCallback, t);
   });
   const [checkEmail, setCheckEmail] = React.useState(false);
   const [resent, setResent] = React.useState(false);
@@ -74,7 +53,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
-    if (error) setError(error.message);
+    if (error) setError(translateAuthError(error.message, t));
     else setResent(true);
     setLoading(false);
   }
@@ -92,7 +71,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         password,
       });
       if (error) {
-        setError(error.message);
+        setError(translateAuthError(error.message, t));
         setLoading(false);
         return;
       }
@@ -107,7 +86,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         },
       });
       if (error) {
-        setError(error.message);
+        setError(translateAuthError(error.message, t));
         setLoading(false);
         return;
       }
@@ -129,21 +108,17 @@ export function AuthForm({ mode }: AuthFormProps) {
           <MailCheck className="h-6 w-6" />
         </div>
         <h1 className="font-display text-2xl font-bold uppercase tracking-wide text-white">
-          Check your email
+          {t.auth.checkEmail.title}
         </h1>
         <p className="text-sm text-muted">
-          We sent a confirmation link to{" "}
-          <span className="text-ink">{email}</span>. Click it to activate your
-          vault.
+          {fill(t.auth.checkEmail.body, { email })}
         </p>
-        <p className="text-xs text-muted-2">
-          Nothing after a minute or two? Check your spam folder.
-        </p>
+        <p className="text-xs text-muted-2">{t.auth.checkEmail.spam}</p>
 
         {/* Confirmation emails do go missing; without this the only way back
             in is to sign up again with the same address. */}
         {resent ? (
-          <p className="text-sm text-accent">Sent again — have another look.</p>
+          <p className="text-sm text-accent">{t.auth.checkEmail.resent}</p>
         ) : (
           <Button
             type="button"
@@ -153,7 +128,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             onClick={handleResend}
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            Resend the email
+            {t.auth.checkEmail.resend}
           </Button>
         )}
 
@@ -172,15 +147,11 @@ export function AuthForm({ mode }: AuthFormProps) {
         <h1 className="font-display text-2xl font-bold uppercase tracking-wide text-white">
           {copy.title}
         </h1>
-        <p className="mt-1 text-sm text-muted">
-          {mode === "login"
-            ? "Log in to reach your collection."
-            : "Start cataloguing your shirts in seconds."}
-        </p>
+        <p className="mt-1 text-sm text-muted">{copy.subtitle}</p>
       </div>
 
       <div>
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{t.auth.email}</Label>
         <Input
           id="email"
           type="email"
@@ -188,19 +159,19 @@ export function AuthForm({ mode }: AuthFormProps) {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
+          placeholder={t.auth.emailPlaceholder}
         />
       </div>
 
       <div>
         <div className="flex items-baseline justify-between gap-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t.auth.password}</Label>
           {mode === "login" && (
             <Link
               href="/forgot-password"
               className="mb-1.5 text-xs text-muted transition-colors hover:text-accent"
             >
-              Forgot it?
+              {t.auth.forgot}
             </Link>
           )}
         </div>
@@ -230,7 +201,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       <p className="text-center text-sm text-muted">
         {copy.altText}{" "}
         <Link
-          href={copy.altHref}
+          href={altHref}
           className="font-medium text-accent hover:underline"
         >
           {copy.altLink}
