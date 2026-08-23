@@ -499,6 +499,9 @@ app/
   collection/actions.ts    # Server Actions: create / update / delete shirt
   api/identify/route.ts    # Gemini Vision identification endpoint
   layout.tsx               # Fonts (Oswald display / Inter body) + metadata
+  icon.svg                 # Browser tab icon — the K mark, drawn as paths
+  apple-icon.png           # 180px iOS home-screen icon
+  favicon.ico              # 32px fallback for older browsers
   globals.css              # Tailwind v4 theme tokens & design system
 components/
   Brand.tsx                # KitVault wordmark
