@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { prepareImages, thumbPath } from "@/lib/image";
 import { useQuota } from "@/components/QuotaProvider";
 import { createShirts, type BulkResult } from "@/app/collection/actions";
+import { fill } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
 
 /** How many photos one batch may hold. */
 export const MAX_FILES = 20;
@@ -99,6 +101,7 @@ export function BulkJobProvider({
   onSaved: (result: BulkResult) => void;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   const { setQuota } = useQuota();
   const [status, setStatus] = React.useState<BulkStatus>("idle");
   const [items, setItems] = React.useState<BulkItem[]>([]);
@@ -148,7 +151,7 @@ export function BulkJobProvider({
       const job = ++jobRef.current;
       setError(
         picked.length > MAX_FILES
-          ? `Up to ${MAX_FILES} photos at a time — using the first ${MAX_FILES}.`
+          ? fill(t.bulk.tooMany, { max: MAX_FILES })
           : null,
       );
       setItems([]);
@@ -190,8 +193,7 @@ export function BulkJobProvider({
           // Once the daily allowance is gone, stop calling the API for the
           // rest of the batch: they would all be refused.
           if (quotaSpent) {
-            item.aiError =
-              "No AI identifications left — fill this one in by hand.";
+            item.aiError = t.bulk.noCreditLeft;
           } else {
             const { json, error: identifyError } = await identify(full);
             if (jobRef.current !== job) return;
@@ -238,7 +240,7 @@ export function BulkJobProvider({
         setStatus("ready");
       })();
     },
-    [identify],
+    [identify, t],
   );
 
   const updateItem = React.useCallback(
@@ -291,7 +293,7 @@ export function BulkJobProvider({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        setError("You are not signed in.");
+        setError(t.errors.notSignedIn);
         setStatus("ready");
         return;
       }
@@ -307,9 +309,7 @@ export function BulkJobProvider({
             upsert: false,
           });
         if (upErr) {
-          setError(
-            `Photo upload failed for ${item.form.team}: ${upErr.message}`,
-          );
+          setError(fill(t.addShirt.uploadFailed, { error: upErr.message }));
           setStatus("ready");
           return;
         }
@@ -338,7 +338,7 @@ export function BulkJobProvider({
       setOpen(false);
       onSaved(result);
     })();
-  }, [items, incomplete, onSaved]);
+  }, [items, incomplete, onSaved, t]);
 
   // Progress in the tab title, so a background batch is visible from another
   // tab without leaving the page open.

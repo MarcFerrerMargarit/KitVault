@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { COLLECTION_FULL_CODE, fetchCollectionLimit } from "@/lib/quota";
 import { thumbPath } from "@/lib/image";
 import type { ShirtFormData } from "@/lib/types";
+import { fill } from "@/lib/i18n/format";
+import { getTranslations } from "@/lib/i18n/server";
 
 export interface ActionResult {
   error?: string;
@@ -23,7 +25,8 @@ export async function createShirt(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "You are not signed in." };
+  const { t } = await getTranslations();
+  if (!user) return { error: t.errors.notSignedIn };
 
   const confidence =
     prediction && typeof prediction.confidence === "number"
@@ -64,8 +67,12 @@ export async function createShirt(
       return {
         collectionFull: true,
         error: limit
-          ? `Your ${limit.plan} plan holds ${limit.maxShirts} shirts and you have ${limit.used}. Upgrade to add more.`
-          : "Your collection is full. Upgrade your plan to add more shirts.",
+          ? fill(t.errors.collectionFull, {
+              plan: limit.plan,
+              max: limit.maxShirts ?? 0,
+              used: limit.used,
+            })
+          : t.errors.collectionFullGeneric,
       };
     }
     return { error: error.message };
@@ -120,6 +127,7 @@ export interface BulkResult {
 export async function createShirts(
   items: BulkShirtInput[],
 ): Promise<BulkResult> {
+  const { t } = await getTranslations();
   const failures: BulkResult["failures"] = [];
   let saved = 0;
   let collectionFull = false;
@@ -145,7 +153,7 @@ export async function createShirts(
           failures.push({
             index: index + 1 + restIndex,
             team: rest.data.team.trim() || "Untitled",
-            error: "Not saved — your collection is full.",
+            error: t.errors.notSavedFull,
           });
           if (rest.imagePath) {
             await supabaseRemove(rest.imagePath);
@@ -180,7 +188,8 @@ export async function updateShirt(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "You are not signed in." };
+  const { t } = await getTranslations();
+  if (!user) return { error: t.errors.notSignedIn };
 
   const patch: Record<string, unknown> = {
     team: data.team.trim(),
@@ -214,7 +223,8 @@ export async function deleteShirt(id: string): Promise<ActionResult> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "You are not signed in." };
+  const { t } = await getTranslations();
+  if (!user) return { error: t.errors.notSignedIn };
 
   // Look up the photo so we can remove it from storage too (best-effort).
   const { data: row } = await supabase
@@ -260,7 +270,8 @@ export async function deleteAccount(): Promise<ActionResult> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "You are not signed in." };
+  const { t } = await getTranslations();
+  if (!user) return { error: t.errors.notSignedIn };
 
   // List the whole folder rather than reading `shirts.image_path`: that also
   // catches uploads whose row never made it in.
@@ -269,7 +280,8 @@ export async function deleteAccount(): Promise<ActionResult> {
     const { data: files, error } = await supabase.storage
       .from("shirts")
       .list(user.id, { limit: STORAGE_PAGE, offset });
-    if (error) return { error: `Could not list your photos: ${error.message}` };
+    if (error)
+      return { error: fill(t.errors.listPhotos, { error: error.message }) };
     if (!files || files.length === 0) break;
     paths.push(...files.map((file) => `${user.id}/${file.name}`));
     if (files.length < STORAGE_PAGE) break;
@@ -280,14 +292,14 @@ export async function deleteAccount(): Promise<ActionResult> {
     // Stop rather than orphan the files: the account still exists, so the user
     // can retry. Deleting it first would make them unreachable forever.
     if (error) {
-      return { error: `Could not delete your photos: ${error.message}` };
+      return { error: fill(t.errors.deletePhotos, { error: error.message }) };
     }
   }
 
   // Cascades to profiles, shirts, ai_corrections and ai_usage.
   const { error } = await supabase.rpc("delete_own_account");
   if (error)
-    return { error: `Could not delete your account: ${error.message}` };
+    return { error: fill(t.errors.deleteAccount, { error: error.message }) };
 
   await supabase.auth.signOut();
   return {};

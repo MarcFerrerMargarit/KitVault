@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { useI18n } from "@/components/I18nProvider";
 
 interface CollectionHeaderProps {
   /** Email of the signed-in user. */
@@ -24,6 +25,7 @@ interface CollectionHeaderProps {
 
 /** Top bar for the collection: brand + account menu with logout. */
 export function CollectionHeader({ email, plan }: CollectionHeaderProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const initials = email.slice(0, 2).toUpperCase();
   const [deleteOpen, setDeleteOpen] = React.useState(false);
@@ -45,36 +47,36 @@ export function CollectionHeader({ email, plan }: CollectionHeaderProps) {
           <DropdownMenu trigger={<Avatar fallback={initials} />}>
             <DropdownMenuLabel>
               <span className="block text-[11px] uppercase tracking-wide text-muted-2">
-                Signed in as
+                {t.account.signedInAs}
               </span>
               <span className="block truncate text-ink">{email}</span>
               {plan && (
                 <span className="mt-1 block text-[11px] uppercase tracking-wide text-muted">
-                  {plan} plan
+                  {plan} {t.account.planSuffix}
                 </span>
               )}
             </DropdownMenuLabel>
             {plan === "free" && (
               <DropdownMenuItem onClick={() => router.push("/upgrade")}>
                 <Sparkles className="h-4 w-4" />
-                Upgrade to Pro
+                {t.account.upgrade}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem>
               <User className="h-4 w-4" />
-              Profile
+              {t.account.profile}
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Settings className="h-4 w-4" />
-              Settings
+              {t.account.settings}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
-              Log out
+              {t.account.logout}
             </DropdownMenuItem>
             <DropdownMenuItem destructive onClick={() => setDeleteOpen(true)}>
               <Trash2 className="h-4 w-4" />
-              Delete account
+              {t.account.deleteAccount}
             </DropdownMenuItem>
           </DropdownMenu>
         </div>

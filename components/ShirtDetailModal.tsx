@@ -19,6 +19,8 @@ import {
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { fill } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
 
 interface ShirtDetailModalProps {
   shirt: Shirt | null;
@@ -56,6 +58,7 @@ export function ShirtDetailModal({
   onEdit,
   onDelete,
 }: ShirtDetailModalProps) {
+  const { t } = useI18n();
   if (!shirt) return null;
 
   const tone = confidenceTone(shirt.ai.confidence);
@@ -108,13 +111,29 @@ export function ShirtDetailModal({
           </h2>
 
           <div className="mt-4">
-            <MetaRow icon={Calendar} label="Season" value={shirt.season} />
-            <MetaRow icon={Tag} label="Version" value={shirt.version} />
-            <MetaRow icon={MapPin} label="Country" value={shirt.country || "—"} />
-            <MetaRow icon={Trophy} label="League" value={shirt.league || "—"} />
+            <MetaRow
+              icon={Calendar}
+              label={t.detail.season}
+              value={shirt.season}
+            />
             <MetaRow
               icon={Tag}
-              label="Manufacturer"
+              label={t.detail.version}
+              value={shirt.version}
+            />
+            <MetaRow
+              icon={MapPin}
+              label={t.detail.country}
+              value={shirt.country || "—"}
+            />
+            <MetaRow
+              icon={Trophy}
+              label={t.detail.league}
+              value={shirt.league || "—"}
+            />
+            <MetaRow
+              icon={Tag}
+              label={t.detail.manufacturer}
               value={shirt.manufacturer || "—"}
             />
           </div>
@@ -130,14 +149,14 @@ export function ShirtDetailModal({
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-accent" />
               <span className="text-xs font-semibold uppercase tracking-wide text-accent">
-                AI Identification
+                {t.detail.aiTitle}
               </span>
             </div>
             <p className="mt-1.5 text-sm text-ink">
-              Identified as{" "}
+              {t.detail.identifiedAs}{" "}
               <span className="font-semibold">{shirt.ai.label}</span>{" "}
               <span className={cn("font-semibold", tone.className)}>
-                (confidence: {shirt.ai.confidence}%)
+                {fill(t.detail.confidence, { value: shirt.ai.confidence })}
               </span>
             </p>
           </div>
@@ -150,11 +169,11 @@ export function ShirtDetailModal({
               onClick={() => onEdit(shirt)}
             >
               <Pencil className="h-4 w-4" />
-              Edit details
+              {t.detail.edit}
             </Button>
             <Button variant="danger" onClick={() => onDelete(shirt)}>
               <Trash2 className="h-4 w-4" />
-              Delete
+              {t.detail.delete}
             </Button>
           </div>
         </div>

@@ -31,6 +31,8 @@ import { BulkJobBadge } from "@/components/BulkJobBadge";
 import { BulkJobProvider, useBulkJob } from "@/components/BulkJobProvider";
 import { ShirtDetailModal } from "@/components/ShirtDetailModal";
 import { Button } from "@/components/ui/button";
+import { fill, plural } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
 
 interface ShirtGridProps {
   /** Shirts fetched on the server for the signed-in user. */
@@ -67,6 +69,7 @@ const NEW_SHIRT_COLORS = [
  * then reconciled when the server sends fresh props after revalidation.
  */
 export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
 
@@ -187,7 +190,11 @@ export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
       const [first] = result.failures;
       setError(
         result.saved > 0
-          ? `Saved ${result.saved}, but ${result.failures.length} could not be added. ${first.error}`
+          ? fill(t.collection.bulkSaved.partial, {
+              saved: result.saved,
+              failed: result.failures.length,
+              reason: first.error,
+            })
           : first.error,
       );
     } else {
@@ -283,17 +290,21 @@ export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
         <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="flex items-center gap-2 font-display text-2xl font-bold uppercase tracking-wide text-white sm:text-3xl">
-              Your collection
+              {t.collection.title}
               {isPending && (
                 <Loader2 className="h-4 w-4 animate-spin text-muted" />
               )}
             </h1>
             <p className="text-sm text-muted">
               {view === "map"
-                ? `${shirts.length} ${shirts.length === 1 ? "shirt" : "shirts"} on the map`
-                : `${filtered.length} of ${shirts.length} shirts${
-                    hasActiveFilters ? " match your filters" : ""
-                  }`}
+                ? plural(t.collection.onTheMap, shirts.length)
+                : plural(
+                    hasActiveFilters
+                      ? t.collection.countFiltered
+                      : t.collection.countAll,
+                    filtered.length,
+                    { shown: filtered.length, total: shirts.length },
+                  )}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -301,21 +312,31 @@ export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
             {!isEmpty && (
               <div
                 role="tablist"
-                aria-label="Collection view"
+                aria-label={t.collection.viewLabel}
                 className="flex items-center gap-0.5 rounded-[var(--radius)] border border-border bg-surface p-0.5"
               >
                 {(
                   [
-                    { id: "grid", label: "Grid", Icon: LayoutGrid },
-                    { id: "map", label: "Map", Icon: Globe2 },
+                    {
+                      id: "grid",
+                      label: t.collection.viewGrid,
+                      title: t.collection.viewGridTitle,
+                      Icon: LayoutGrid,
+                    },
+                    {
+                      id: "map",
+                      label: t.collection.viewMap,
+                      title: t.collection.viewMapTitle,
+                      Icon: Globe2,
+                    },
                   ] as const
-                ).map(({ id, label, Icon }) => (
+                ).map(({ id, label, title, Icon }) => (
                   <button
                     key={id}
                     type="button"
                     role="tab"
                     aria-selected={view === id}
-                    title={`${label} view`}
+                    title={title}
                     onClick={() => setView(id)}
                     className={`flex h-9 items-center gap-1.5 rounded-[3px] px-2.5 text-sm font-medium transition-colors ${
                       view === id
@@ -336,12 +357,15 @@ export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
               disabled={isFull}
               title={
                 isFull
-                  ? `Your ${collectionLimit?.plan} plan holds ${maxShirts} shirts`
+                  ? fill(t.collection.planFullTooltip, {
+                      plan: collectionLimit?.plan ?? "",
+                      max: maxShirts ?? 0,
+                    })
                   : undefined
               }
             >
               <Plus className="h-5 w-5" />
-              <span className="hidden sm:inline">Add shirt</span>
+              <span className="hidden sm:inline">{t.collection.addShirt}</span>
             </Button>
           </div>
         </div>
@@ -358,18 +382,16 @@ export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
           >
             <Lock className="h-4 w-4 shrink-0" />
             <span className="flex-1">
-              {isFull ? (
-                <>
-                  Your collection is full — {maxShirts} shirts on the{" "}
-                  {collectionLimit?.plan} plan. Upgrade to keep adding, or
-                  delete one to make room.
-                </>
-              ) : (
-                <>
-                  {shirts.length} of {maxShirts} shirts used on the{" "}
-                  {collectionLimit?.plan} plan.
-                </>
-              )}
+              {isFull
+                ? fill(t.collection.planFull, {
+                    max: maxShirts ?? 0,
+                    plan: collectionLimit?.plan ?? "",
+                  })
+                : fill(t.collection.planUsage, {
+                    used: shirts.length,
+                    max: maxShirts ?? 0,
+                    plan: collectionLimit?.plan ?? "",
+                  })}
             </span>
           </div>
         )}
@@ -420,15 +442,15 @@ export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
             </div>
             <div>
               <p className="font-display text-lg font-bold uppercase tracking-wide text-white">
-                Your vault is empty
+                {t.collection.empty.title}
               </p>
               <p className="mt-1 text-sm text-muted">
-                Add your first shirt to get started.
+                {t.collection.empty.body}
               </p>
             </div>
             <Button size="sm" onClick={handleOpenAdd}>
               <Plus className="h-4 w-4" />
-              Add shirt
+              {t.collection.empty.cta}
             </Button>
           </div>
         ) : filtered.length > 0 ? (
@@ -444,10 +466,10 @@ export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
             </div>
             <div>
               <p className="font-display text-lg font-bold uppercase tracking-wide text-white">
-                No shirts found
+                {t.collection.noResults.title}
               </p>
               <p className="mt-1 text-sm text-muted">
-                Try adjusting or resetting your filters.
+                {t.collection.noResults.body}
               </p>
             </div>
             <Button
@@ -455,7 +477,7 @@ export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
               size="sm"
               onClick={() => setFilters(DEFAULT_FILTERS)}
             >
-              Reset filters
+              {t.collection.noResults.cta}
             </Button>
           </div>
         )}
@@ -491,6 +513,7 @@ export function ShirtGrid({ initialShirts, collectionLimit }: ShirtGridProps) {
  * second one.
  */
 function BulkAddButton({ disabled }: { disabled: boolean }) {
+  const { t } = useI18n();
   const job = useBulkJob();
   const busy = job.status === "analyzing";
 
@@ -500,7 +523,7 @@ function BulkAddButton({ disabled }: { disabled: boolean }) {
       variant="secondary"
       onClick={() => job.setOpen(true)}
       disabled={disabled && job.status === "idle"}
-      title={busy ? "A batch is being analyzed" : "Add several shirts at once"}
+      title={busy ? t.collection.bulkTooltipBusy : t.collection.bulkTooltip}
     >
       {busy ? (
         <Loader2 className="h-5 w-5 animate-spin" />
@@ -508,7 +531,7 @@ function BulkAddButton({ disabled }: { disabled: boolean }) {
         <Layers className="h-5 w-5" />
       )}
       <span className="hidden md:inline">
-        {busy ? "Analyzing…" : "Bulk add"}
+        {busy ? t.collection.bulkBusy : t.collection.bulkAdd}
       </span>
     </Button>
   );

@@ -1,5 +1,8 @@
+"use client";
+
 import { Shirt as ShirtIcon, Globe2, Trophy, Clock } from "lucide-react";
 import type { Shirt } from "@/lib/types";
+import { useI18n } from "@/components/I18nProvider";
 
 interface StatsBarProps {
   shirts: Shirt[];
@@ -13,6 +16,7 @@ interface Stat {
 
 /** Derives headline numbers from the whole collection. */
 export function StatsBar({ shirts }: StatsBarProps) {
+  const { t } = useI18n();
   const countries = new Set(shirts.map((s) => s.country).filter(Boolean)).size;
   const leagues = new Set(shirts.map((s) => s.league).filter(Boolean)).size;
 
@@ -21,11 +25,11 @@ export function StatsBar({ shirts }: StatsBarProps) {
   )[0];
 
   const stats: Stat[] = [
-    { label: "Shirts", value: String(shirts.length), icon: ShirtIcon },
-    { label: "Countries", value: String(countries), icon: Globe2 },
-    { label: "Leagues", value: String(leagues), icon: Trophy },
+    { label: t.stats.shirts, value: String(shirts.length), icon: ShirtIcon },
+    { label: t.stats.countries, value: String(countries), icon: Globe2 },
+    { label: t.stats.leagues, value: String(leagues), icon: Trophy },
     {
-      label: "Last added",
+      label: t.stats.lastAdded,
       value: latest ? latest.team : "—",
       icon: Clock,
     },

@@ -4,6 +4,7 @@ import * as React from "react";
 import { BellRing, Check, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/I18nProvider";
 
 /**
  * Records that a user wants the paid plan.
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
  * the paid plan is worth building the billing for.
  */
 export function UpgradeInterest({ alreadyOnList }: { alreadyOnList: boolean }) {
+  const { t } = useI18n();
   const [done, setDone] = React.useState(alreadyOnList);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -26,7 +28,7 @@ export function UpgradeInterest({ alreadyOnList }: { alreadyOnList: boolean }) {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      setError("You are not signed in.");
+      setError(t.errors.notSignedIn);
       setLoading(false);
       return;
     }
@@ -48,12 +50,9 @@ export function UpgradeInterest({ alreadyOnList }: { alreadyOnList: boolean }) {
           <Check className="h-4 w-4" />
         </div>
         <p className="font-display text-sm font-bold uppercase tracking-wide text-accent">
-          You&apos;re on the list
+          {t.upgrade.onListTitle}
         </p>
-        <p className="text-xs text-muted">
-          We&apos;ll email you the moment Pro can be paid for. Nothing is
-          charged until then.
-        </p>
+        <p className="text-xs text-muted">{t.upgrade.onListBody}</p>
       </div>
     );
   }
@@ -66,11 +65,9 @@ export function UpgradeInterest({ alreadyOnList }: { alreadyOnList: boolean }) {
         ) : (
           <BellRing className="h-5 w-5" />
         )}
-        Notify me when Pro is available
+        {t.upgrade.notify}
       </Button>
-      <p className="text-xs text-muted-2">
-        No card, no charge — just a heads-up when payments open.
-      </p>
+      <p className="text-xs text-muted-2">{t.upgrade.noCard}</p>
       {error && (
         <p className="rounded-[var(--radius)] border border-danger/40 bg-danger-soft px-3 py-2 text-sm text-danger">
           {error}

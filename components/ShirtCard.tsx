@@ -1,8 +1,11 @@
+"use client";
+
 import { Shirt as ShirtIcon, Eye } from "lucide-react";
 import type { Shirt } from "@/lib/types";
 import { VERSION_BADGE, placeholderGradient } from "@/lib/shirt-helpers";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/components/I18nProvider";
 
 interface ShirtCardProps {
   shirt: Shirt;
@@ -15,6 +18,7 @@ interface ShirtCardProps {
  * like the trim of the shirt itself.
  */
 export function ShirtCard({ shirt, onView }: ShirtCardProps) {
+  const { t } = useI18n();
   return (
     <button
       type="button"
@@ -83,7 +87,7 @@ export function ShirtCard({ shirt, onView }: ShirtCardProps) {
         <div className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 backdrop-blur-[2px] transition-opacity duration-200 group-hover:opacity-100">
           <span className="inline-flex items-center gap-2 rounded-[var(--radius)] bg-accent px-4 py-2 text-sm font-semibold text-bg">
             <Eye className="h-4 w-4" />
-            View details
+            {t.card.view}
           </span>
         </div>
       </div>

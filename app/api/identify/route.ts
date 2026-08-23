@@ -7,6 +7,8 @@ import {
   type QuotaDenialReason,
 } from "@/lib/quota";
 import { VERSIONS } from "@/lib/mock-data";
+import { fill } from "@/lib/i18n/format";
+import { getTranslations } from "@/lib/i18n/server";
 
 // Vercel functions default to a 10s ceiling and a vision call with a photo can
 // get close to it. 60s is the most the Hobby plan allows.
@@ -31,18 +33,21 @@ interface CreditRow {
  * Returns the AI's best guess of the shirt's metadata + token usage.
  */
 export async function POST(request: Request) {
+  // Errors from here reach the user's screen, so they follow their language.
+  const { t } = await getTranslations();
+
   // Only signed-in users may spend the API budget.
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ error: t.errors.notSignedIn }, { status: 401 });
   }
 
   if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json(
-      { error: "GEMINI_API_KEY is not configured on the server." },
+      { error: t.errors.geminiMissing },
       { status: 500 },
     );
   }
@@ -50,10 +55,13 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const image = form.get("image");
   if (!(image instanceof File)) {
-    return NextResponse.json({ error: "No image provided" }, { status: 400 });
+    return NextResponse.json({ error: t.errors.noImage }, { status: 400 });
   }
   if (image.size > MAX_BYTES) {
-    return NextResponse.json({ error: "Image too large" }, { status: 400 });
+    return NextResponse.json(
+      { error: t.errors.imageTooLarge },
+      { status: 400 },
+    );
   }
 
   // Everything above is free to reject. From here on the request costs money,
@@ -65,17 +73,14 @@ export async function POST(request: Request) {
 
   if (creditError || !credit) {
     console.error("[identify] quota check failed:", creditError?.message);
-    return NextResponse.json(
-      { error: "Could not check your AI quota. Please try again." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: t.errors.quotaCheck }, { status: 500 });
   }
 
   if (!credit.allowed) {
     const quota = await fetchQuota(supabase);
     const reason = credit.reason as QuotaDenialReason;
     return NextResponse.json(
-      { error: quotaDenialMessage(reason, quota), reason, quota },
+      { error: quotaDenialMessage(reason, quota, t), reason, quota },
       {
         status: 429,
         headers: reason === "burst" ? { "Retry-After": "60" } : {},
@@ -152,10 +157,7 @@ fixed list. If unsure, still provide your best estimate.`;
     const text = result.text;
     if (!text) {
       await releaseCredit(supabase, usageId);
-      return NextResponse.json(
-        { error: "Empty response from the model" },
-        { status: 502 },
-      );
+      return NextResponse.json({ error: t.errors.emptyModel }, { status: 502 });
     }
 
     const parsed = JSON.parse(text) as Record<string, unknown>;
@@ -203,7 +205,7 @@ fixed list. If unsure, still provide your best estimate.`;
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[identify] error:", message);
     return NextResponse.json(
-      { error: `Identification failed: ${message}` },
+      { error: fill(t.errors.identifyFailed, { error: message }) },
       { status: 502 },
     );
   }

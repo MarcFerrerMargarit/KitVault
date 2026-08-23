@@ -23,9 +23,7 @@ export function confidenceTone(confidence: number): {
   label: string;
   className: string;
 } {
-  if (confidence >= 85)
-    return { label: "High", className: "text-accent" };
-  if (confidence >= 70)
-    return { label: "Medium", className: "text-[#fbbf24]" };
+  if (confidence >= 85) return { label: "High", className: "text-accent" };
+  if (confidence >= 70) return { label: "Medium", className: "text-[#fbbf24]" };
   return { label: "Low", className: "text-[#f97316]" };
 }

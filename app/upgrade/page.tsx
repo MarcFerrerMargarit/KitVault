@@ -8,6 +8,8 @@ import { Brand } from "@/components/Brand";
 import { Pricing } from "@/components/landing/Pricing";
 import { UpgradeInterest } from "@/components/UpgradeInterest";
 import { Button } from "@/components/ui/button";
+import { fill } from "@/lib/i18n/format";
+import { getTranslations } from "@/lib/i18n/server";
 
 export const metadata = {
   title: "Upgrade to Pro — KitVault",
@@ -20,9 +22,10 @@ export default async function UpgradePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/upgrade");
 
-  const [limit, plans] = await Promise.all([
+  const [limit, plans, { t }] = await Promise.all([
     fetchCollectionLimit(supabase),
     fetchPlans(),
+    getTranslations(),
   ]);
 
   const isPro = limit !== null && limit.plan !== "free";
@@ -43,7 +46,7 @@ export default async function UpgradePage() {
           <Link href="/collection">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4" />
-              Back to my collection
+              {t.upgrade.back}
             </Button>
           </Link>
         </div>
@@ -56,31 +59,26 @@ export default async function UpgradePage() {
               <Crown className="h-7 w-7" />
             </div>
             <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-white">
-              You&apos;re on Pro
+              {t.upgrade.proTitle}
             </h1>
-            <p className="mt-3 text-muted">
-              Unlimited shirts, bulk upload and the highest AI allowance. There
-              is nothing else to buy.
-            </p>
+            <p className="mt-3 text-muted">{t.upgrade.proBody}</p>
             <Link href="/collection" className="mt-6 inline-block">
-              <Button size="lg">Back to my collection</Button>
+              <Button size="lg">{t.upgrade.back}</Button>
             </Link>
           </section>
         ) : (
           <>
             <section className="mx-auto w-full max-w-2xl px-4 pt-16 text-center sm:px-6">
               <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-white sm:text-4xl">
-                Room for every shirt
+                {t.upgrade.title}
               </h1>
               <p className="mt-3 text-muted">
-                You&apos;re on the free plan
-                {limit?.maxShirts != null && (
-                  <>
-                    {" "}
-                    — <span className="text-ink">{limit.used}</span> of{" "}
-                    {limit.maxShirts} shirts used
-                  </>
-                )}
+                {t.upgrade.onFree}
+                {limit?.maxShirts != null &&
+                  fill(t.upgrade.usage, {
+                    used: limit.used,
+                    max: limit.maxShirts,
+                  })}
                 .
               </p>
             </section>
@@ -92,8 +90,7 @@ export default async function UpgradePage() {
                   checkout does not yet. */}
               <div className="rounded-[var(--radius)] border border-border bg-surface p-6">
                 <p className="mb-4 text-center text-sm text-muted">
-                  Payments aren&apos;t open yet. Put your name down and
-                  you&apos;ll be first to know.
+                  {t.upgrade.notOpen}
                 </p>
                 <UpgradeInterest alreadyOnList={Boolean(interest)} />
               </div>

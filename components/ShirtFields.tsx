@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { SuggestInput } from "@/components/ui/suggest-input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/components/I18nProvider";
 
 interface ShirtFieldsProps {
   value: ShirtFormData;
@@ -33,34 +34,35 @@ export function ShirtFields({
   idPrefix = "shirt",
   showNotes = true,
 }: ShirtFieldsProps) {
+  const { t } = useI18n();
   const id = (name: string) => `${idPrefix}-${name}`;
 
   return (
     <>
       <div>
-        <Label htmlFor={id("team")}>Team name</Label>
+        <Label htmlFor={id("team")}>{t.fields.team}</Label>
         <Input
           id={id("team")}
           value={value.team}
           onChange={(e) => onChange("team", e.target.value)}
-          placeholder="e.g. FC Barcelona"
+          placeholder={t.fields.teamPlaceholder}
           required
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor={id("season")}>Season</Label>
+          <Label htmlFor={id("season")}>{t.fields.season}</Label>
           <Input
             id={id("season")}
             value={value.season}
             onChange={(e) => onChange("season", e.target.value)}
-            placeholder="e.g. 2019-20"
+            placeholder={t.fields.seasonPlaceholder}
             required
           />
         </div>
         <div>
-          <Label htmlFor={id("version")}>Version</Label>
+          <Label htmlFor={id("version")}>{t.fields.version}</Label>
           <Select
             id={id("version")}
             value={value.version}
@@ -79,46 +81,46 @@ export function ShirtFields({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor={id("country")}>Country</Label>
+          <Label htmlFor={id("country")}>{t.fields.country}</Label>
           <SuggestInput
             id={id("country")}
             options={COUNTRIES}
             value={value.country}
             onChange={(e) => onChange("country", e.target.value)}
-            placeholder="e.g. Spain"
+            placeholder={t.fields.countryPlaceholder}
           />
         </div>
         <div>
-          <Label htmlFor={id("league")}>League</Label>
+          <Label htmlFor={id("league")}>{t.fields.league}</Label>
           <SuggestInput
             id={id("league")}
             options={LEAGUES}
             value={value.league}
             onChange={(e) => onChange("league", e.target.value)}
-            placeholder="e.g. LaLiga (empty if none)"
+            placeholder={t.fields.leaguePlaceholder}
           />
         </div>
       </div>
 
       <div>
-        <Label htmlFor={id("manufacturer")}>Manufacturer</Label>
+        <Label htmlFor={id("manufacturer")}>{t.fields.manufacturer}</Label>
         <SuggestInput
           id={id("manufacturer")}
           options={MANUFACTURERS}
           value={value.manufacturer}
           onChange={(e) => onChange("manufacturer", e.target.value)}
-          placeholder="e.g. Nike"
+          placeholder={t.fields.manufacturerPlaceholder}
         />
       </div>
 
       {showNotes && (
         <div>
-          <Label htmlFor={id("notes")}>Notes (optional)</Label>
+          <Label htmlFor={id("notes")}>{t.fields.notes}</Label>
           <Textarea
             id={id("notes")}
             value={value.notes}
             onChange={(e) => onChange("notes", e.target.value)}
-            placeholder="Anything memorable about this shirt…"
+            placeholder={t.fields.notesPlaceholder}
           />
         </div>
       )}

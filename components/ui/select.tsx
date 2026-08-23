@@ -11,7 +11,9 @@ const Select = React.forwardRef<
   HTMLSelectElement,
   React.SelectHTMLAttributes<HTMLSelectElement>
 >(({ className, children, ...props }, ref) => (
-  <div className="relative">
+  // `className` lands on the wrapper, not the <select>: the wrapper is the
+  // component's root and the box a parent lays out, so callers can size it.
+  <div className={cn("relative", className)}>
     <select
       ref={ref}
       className={cn(
@@ -19,7 +21,6 @@ const Select = React.forwardRef<
         "transition-colors cursor-pointer",
         "focus-visible:outline-none focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent/40",
         "disabled:cursor-not-allowed disabled:opacity-50",
-        className,
       )}
       {...props}
     >

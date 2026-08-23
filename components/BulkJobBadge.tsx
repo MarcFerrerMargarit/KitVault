@@ -2,6 +2,8 @@
 
 import { Loader2, Sparkles, X } from "lucide-react";
 import { useBulkJob } from "@/components/BulkJobProvider";
+import { fill, plural } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
 
 /**
  * Floating status pill for a bulk batch running behind the review dialog.
@@ -10,6 +12,7 @@ import { useBulkJob } from "@/components/BulkJobProvider";
  * nothing on screen to show for it.
  */
 export function BulkJobBadge() {
+  const { t } = useI18n();
   const job = useBulkJob();
 
   // Nothing to report when idle, or when the dialog is already showing it all.
@@ -35,17 +38,20 @@ export function BulkJobBadge() {
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm font-bold uppercase tracking-wide text-white">
             {analyzing
-              ? `Analyzing ${Math.min(job.progress.done + 1, job.progress.total)} of ${job.progress.total}`
+              ? fill(t.bulk.badge.analyzing, {
+                  current: Math.min(job.progress.done + 1, job.progress.total),
+                  total: job.progress.total,
+                })
               : saving
-                ? "Saving your shirts…"
-                : `${job.items.length} shirt${job.items.length === 1 ? "" : "s"} ready`}
+                ? t.bulk.badge.saving
+                : plural(t.bulk.badge.ready, job.items.length)}
           </p>
           <p className="mt-0.5 truncate text-xs text-muted">
             {analyzing
-              ? "Carry on — this runs in the background."
+              ? t.bulk.badge.analyzingBody
               : saving
-                ? "Uploading photos and saving."
-                : "Review them before they join your collection."}
+                ? t.bulk.badge.savingBody
+                : t.bulk.badge.readyBody}
           </p>
 
           {!saving && (
@@ -54,7 +60,7 @@ export function BulkJobBadge() {
               onClick={() => job.setOpen(true)}
               className="mt-2 text-xs font-semibold text-accent underline-offset-2 hover:underline"
             >
-              {analyzing ? "Show progress" : "Review now"}
+              {analyzing ? t.bulk.badge.show : t.bulk.badge.review}
             </button>
           )}
         </div>
@@ -63,7 +69,7 @@ export function BulkJobBadge() {
           <button
             type="button"
             onClick={job.discard}
-            title={analyzing ? "Cancel this batch" : "Discard this batch"}
+            title={analyzing ? t.bulk.badge.cancel : t.bulk.badge.discard}
             className="-mr-1 -mt-1 shrink-0 rounded-[3px] p-1 text-muted-2 transition-colors hover:text-danger"
           >
             <X className="h-4 w-4" />

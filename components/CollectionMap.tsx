@@ -9,6 +9,8 @@ import {
   type CountryIndex,
 } from "@/lib/country-match";
 import type { WorldMapData } from "@/lib/world-map";
+import { fill, plural } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
 
 interface CollectionMapProps {
   shirts: Shirt[];
@@ -75,6 +77,7 @@ function rampPosition(count: number, max: number): number {
 let mapCache: WorldMapData | null = null;
 
 export function CollectionMap({ shirts, onSelectCountry }: CollectionMapProps) {
+  const { t } = useI18n();
   const [world, setWorld] = React.useState<WorldMapData | null>(mapCache);
   const [failed, setFailed] = React.useState(false);
   const [hovered, setHovered] = React.useState<CountryTally | null>(null);
@@ -147,9 +150,7 @@ export function CollectionMap({ shirts, onSelectCountry }: CollectionMapProps) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--radius)] border border-dashed border-border-strong bg-surface py-20 text-center">
         <MapPinOff className="h-7 w-7 text-muted-2" />
-        <p className="text-sm text-muted">
-          The map could not be loaded. Your shirts are all still in the grid.
-        </p>
+        <p className="text-sm text-muted">{t.map.failed}</p>
       </div>
     );
   }
@@ -158,7 +159,7 @@ export function CollectionMap({ shirts, onSelectCountry }: CollectionMapProps) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius)] border border-border bg-surface py-24 text-center">
         <Loader2 className="h-7 w-7 animate-spin text-accent" />
-        <p className="text-sm text-muted">Unrolling the world…</p>
+        <p className="text-sm text-muted">{t.map.loading}</p>
       </div>
     );
   }
@@ -173,7 +174,7 @@ export function CollectionMap({ shirts, onSelectCountry }: CollectionMapProps) {
           viewBox={`0 0 ${world.width} ${world.height}`}
           className="block h-auto w-full"
           role="img"
-          aria-label="World map of your collection"
+          aria-label={t.map.label}
         >
           <defs>
             <radialGradient id="kv-ocean" cx="50%" cy="45%" r="75%">
@@ -214,7 +215,7 @@ export function CollectionMap({ shirts, onSelectCountry }: CollectionMapProps) {
                 role={tally ? "button" : undefined}
                 aria-label={
                   tally
-                    ? `${tally.name}: ${tally.count} ${tally.count === 1 ? "shirt" : "shirts"}`
+                    ? `${tally.name}: ${plural(t.map.countryShirts, tally.count)}`
                     : undefined
                 }
                 onMouseEnter={() => tally && setHovered(tally)}
@@ -248,7 +249,7 @@ export function CollectionMap({ shirts, onSelectCountry }: CollectionMapProps) {
                   {hovered.name}
                 </p>
                 <p className="text-xs text-accent">
-                  {hovered.count} {hovered.count === 1 ? "shirt" : "shirts"}
+                  {plural(t.map.countryShirts, hovered.count)}
                   {hovered.values.length > 1 && (
                     <span className="text-muted">
                       {" "}
@@ -260,10 +261,10 @@ export function CollectionMap({ shirts, onSelectCountry }: CollectionMapProps) {
             ) : (
               <div className="rounded-[var(--radius)] border border-border bg-bg/80 px-3 py-2 backdrop-blur-sm">
                 <p className="text-xs text-muted">
-                  {placed} {placed === 1 ? "shirt" : "shirts"} across{" "}
-                  {ranked.length}{" "}
-                  {ranked.length === 1 ? "country" : "countries"} — click one to
-                  see it
+                  {plural(t.map.summary, ranked.length, {
+                    shirts: placed,
+                    countries: ranked.length,
+                  })}
                 </p>
               </div>
             )}
@@ -284,7 +285,7 @@ export function CollectionMap({ shirts, onSelectCountry }: CollectionMapProps) {
                 {max}
               </span>
               <span className="text-[10px] uppercase tracking-wide text-muted-2">
-                shirts
+                {t.map.legendUnit}
               </span>
             </div>
           )}
@@ -328,9 +329,7 @@ export function CollectionMap({ shirts, onSelectCountry }: CollectionMapProps) {
       {/* The ranking is capped, so say what it is leaving out. */}
       {ranked.length > TOP_COUNTRIES && (
         <p className="text-xs text-muted-2">
-          + {ranked.length - TOP_COUNTRIES} more{" "}
-          {ranked.length - TOP_COUNTRIES === 1 ? "country" : "countries"} on the
-          map — hover or click them there.
+          {plural(t.map.more, ranked.length - TOP_COUNTRIES)}
         </p>
       )}
 
@@ -338,8 +337,11 @@ export function CollectionMap({ shirts, onSelectCountry }: CollectionMapProps) {
       {unplaced.length > 0 && (
         <p className="flex items-start gap-2 text-xs text-muted-2">
           <Globe2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Not on the map:{" "}
-          {unplaced.map(([name, count]) => `${name} (${count})`).join(", ")}
+          {fill(t.map.notOnMap, {
+            list: unplaced
+              .map(([name, count]) => `${name} (${count})`)
+              .join(", "),
+          })}
         </p>
       )}
     </div>

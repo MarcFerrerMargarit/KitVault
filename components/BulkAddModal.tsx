@@ -24,12 +24,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ShirtFields } from "@/components/ShirtFields";
+import { fill, plural } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
 
 /**
  * The review dialog for a bulk batch. It owns no work: the batch lives in
  * `BulkJobProvider`, so closing this only hides it.
  */
 export function BulkAddModal() {
+  const { t } = useI18n();
   const { quota } = useQuota();
   const job = useBulkJob();
   const [dragging, setDragging] = React.useState(false);
@@ -42,13 +45,16 @@ export function BulkAddModal() {
   return (
     <Dialog open={job.open} onOpenChange={job.setOpen} className="max-w-2xl">
       <DialogHeader>
-        <DialogTitle>Add several shirts</DialogTitle>
+        <DialogTitle>{t.bulk.title}</DialogTitle>
         <DialogDescription>
           {analyzing
-            ? "You can close this — it keeps going in the background."
+            ? t.bulk.descBackground
             : job.items.length > 0
-              ? `Review each shirt before saving — ${job.current + 1} of ${job.items.length}.`
-              : "Upload a batch of photos and let AI identify them all."}
+              ? fill(t.bulk.descReview, {
+                  current: job.current + 1,
+                  total: job.items.length,
+                })
+              : t.bulk.descPick}
         </DialogDescription>
       </DialogHeader>
 
@@ -93,18 +99,15 @@ export function BulkAddModal() {
             </div>
             <div>
               <p className="font-medium text-ink">
-                Drag &amp; drop up to {MAX_FILES} photos
+                {fill(t.bulk.dropTitle, { max: MAX_FILES })}
               </p>
-              <p className="mt-1 text-sm text-muted">
-                or click to browse — one shirt per photo
-              </p>
+              <p className="mt-1 text-sm text-muted">{t.bulk.dropBody}</p>
             </div>
           </div>
           {quota && (
             <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-2">
               <Sparkles className="h-3.5 w-3.5" />
-              {quota.remaining} AI identifications left today — photos beyond
-              that can still be filled in by hand.
+              {fill(t.bulk.quotaLeft, { remaining: quota.remaining })}
             </p>
           )}
           {job.error && (
@@ -122,13 +125,12 @@ export function BulkAddModal() {
           </div>
           <div>
             <p className="font-display text-lg font-bold uppercase tracking-wide text-white">
-              Analyzing {Math.min(job.progress.done + 1, job.progress.total)} of{" "}
-              {job.progress.total}…
+              {fill(t.bulk.analyzing, {
+                current: Math.min(job.progress.done + 1, job.progress.total),
+                total: job.progress.total,
+              })}
             </p>
-            <p className="mt-1 text-sm text-muted">
-              Photos are identified one at a time to stay inside the AI rate
-              limit.
-            </p>
+            <p className="mt-1 text-sm text-muted">{t.bulk.analyzingBody}</p>
           </div>
           <div className="h-1 w-56 overflow-hidden rounded-full bg-surface-2">
             <div
@@ -150,7 +152,7 @@ export function BulkAddModal() {
               onClick={() => job.setOpen(false)}
             >
               <Minimize2 className="h-4 w-4" />
-              Keep working
+              {t.bulk.keepWorking}
             </Button>
             <Button
               type="button"
@@ -159,7 +161,7 @@ export function BulkAddModal() {
               onClick={job.discard}
               className="text-danger hover:text-danger"
             >
-              Cancel batch
+              {t.bulk.cancelBatch}
             </Button>
           </div>
         </div>
@@ -177,7 +179,10 @@ export function BulkAddModal() {
                   key={entry.id}
                   type="button"
                   onClick={() => job.setCurrent(index)}
-                  title={entry.form.team || `Photo ${index + 1}`}
+                  title={
+                    entry.form.team ||
+                    fill(t.bulk.photoLabel, { number: index + 1 })
+                  }
                   className={`relative h-14 w-12 shrink-0 overflow-hidden rounded-[3px] border-2 transition-colors ${
                     index === job.current
                       ? "border-accent"
@@ -226,8 +231,9 @@ export function BulkAddModal() {
                   item.confidence !== null && (
                     <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/25 bg-accent-soft p-2.5 text-xs leading-relaxed text-accent">
                       <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      AI suggested these details ({item.confidence}% confidence)
-                      — correct anything that&apos;s wrong.
+                      {fill(t.addShirt.aiSuggested, {
+                        confidence: item.confidence,
+                      })}
                     </p>
                   )
                 )}
@@ -240,7 +246,7 @@ export function BulkAddModal() {
                   className="text-danger hover:text-danger"
                 >
                   <Trash2 className="h-4 w-4" />
-                  Remove this photo
+                  {t.bulk.removePhoto}
                 </Button>
               </div>
             </div>
@@ -291,7 +297,7 @@ export function BulkAddModal() {
               onClick={() => job.setOpen(false)}
               disabled={saving}
             >
-              Later
+              {t.bulk.later}
             </Button>
             <Button
               type="button"
@@ -299,12 +305,12 @@ export function BulkAddModal() {
               disabled={saving || job.incomplete > 0}
               title={
                 job.incomplete > 0
-                  ? `${job.incomplete} shirt(s) still need a team and season`
+                  ? fill(t.bulk.incomplete, { count: job.incomplete })
                   : undefined
               }
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              Save {job.items.length} shirt{job.items.length === 1 ? "" : "s"}
+              {plural(t.bulk.save, job.items.length)}
             </Button>
           </DialogFooter>
         </>
@@ -313,7 +319,7 @@ export function BulkAddModal() {
       {/* Everything was removed during review. */}
       {!analyzing && job.status !== "idle" && job.items.length === 0 && (
         <div className="p-10 text-center">
-          <p className="text-sm text-muted">No photos left in this batch.</p>
+          <p className="text-sm text-muted">{t.bulk.emptyBatch}</p>
           <Button
             type="button"
             variant="secondary"
@@ -321,7 +327,7 @@ export function BulkAddModal() {
             className="mt-4"
             onClick={job.discard}
           >
-            Start over
+            {t.bulk.startOver}
           </Button>
         </div>
       )}

@@ -206,10 +206,17 @@ dynamic rendering, so the landing page is no longer statically cached. That is
 inherent to choosing the language by cookie — one HTML document cannot be
 correct for two languages.
 
-**Not translated yet:** the collection itself (grid, modals, map, bulk upload),
-and the Supabase email templates, which are edited in the dashboard and have no
-per-user language. Shirt data — team, country and league names — stays as
-entered, and the map's country names come from Natural Earth in English.
+**Not translated:** the Supabase email templates, which are edited in the
+dashboard and have no per-user language. Shirt data — team, country and league
+names — stays as entered, and the map's country names come from Natural Earth
+in English.
+
+**Translation is not transliteration.** Spanish runs longer than English, and
+two places needed the design to change rather than the words to be squeezed:
+the filter row now gives the dropdowns the space instead of the search box, and
+the Spanish defaults are the bare plural ("Temporadas") rather than a literal
+"Todas las temporadas", which is how Spanish interfaces usually resolve it and
+the only version that fits four filters on one row.
 
 ## The map view
 

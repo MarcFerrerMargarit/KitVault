@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ShirtFields } from "@/components/ShirtFields";
+import { fill } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
 
 type Step = "upload" | "analyzing" | "form";
 
@@ -54,6 +56,7 @@ export function AddShirtModal({
   editingShirt,
 }: AddShirtModalProps) {
   const isEditing = Boolean(editingShirt);
+  const { t } = useI18n();
   const { quota, setQuota } = useQuota();
   // `null` quota = unknown (migration not run); don't block the user on it.
   const outOfCredit = quota !== null && quota.remaining <= 0;
@@ -149,15 +152,11 @@ export function AddShirtModal({
         setForm(EMPTY_FORM);
         setAiConfidence(null);
         setPrediction(null);
-        setError(
-          e instanceof Error
-            ? e.message
-            : "AI identification failed — enter the details manually.",
-        );
+        setError(e instanceof Error ? e.message : t.addShirt.identifyFailed);
         setStep("form");
       }
     },
-    [setQuota],
+    [setQuota, t.addShirt.identifyFailed],
   );
 
   const selectFile = async (picked: File | undefined) => {
@@ -193,7 +192,7 @@ export function AddShirtModal({
     // details in. Saving the shirt itself is never rationed.
     if (outOfCredit) {
       setError(
-        `You've used all ${quota?.userLimit ?? 0} AI identifications for today — fill the details in manually.`,
+        fill(t.addShirt.quotaNoneError, { limit: quota?.userLimit ?? 0 }),
       );
       setStep("form");
       return;
@@ -224,7 +223,7 @@ export function AddShirtModal({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        setError("You are not signed in.");
+        setError(t.errors.notSignedIn);
         setSaving(false);
         return;
       }
@@ -237,7 +236,7 @@ export function AddShirtModal({
           upsert: false,
         });
       if (upErr) {
-        setError(`Photo upload failed: ${upErr.message}`);
+        setError(fill(t.addShirt.uploadFailed, { error: upErr.message }));
         setSaving(false);
         return;
       }
@@ -270,11 +269,11 @@ export function AddShirtModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} className="max-w-xl">
       <DialogHeader>
-        <DialogTitle>{isEditing ? "Edit shirt" : "Add new shirt"}</DialogTitle>
+        <DialogTitle>
+          {isEditing ? t.addShirt.titleEdit : t.addShirt.titleAdd}
+        </DialogTitle>
         <DialogDescription>
-          {step === "form"
-            ? "Review the details and save to your collection."
-            : "Upload a photo and let AI identify it for you."}
+          {step === "form" ? t.addShirt.descForm : t.addShirt.descUpload}
         </DialogDescription>
       </DialogHeader>
 
@@ -319,26 +318,25 @@ export function AddShirtModal({
               <UploadCloud className="h-7 w-7" />
             </div>
             <div>
-              <p className="font-medium text-ink">
-                Drag &amp; drop a photo here
-              </p>
-              <p className="mt-1 text-sm text-muted">
-                or click to browse — PNG, JPG up to 10MB
-              </p>
+              <p className="font-medium text-ink">{t.addShirt.dropTitle}</p>
+              <p className="mt-1 text-sm text-muted">{t.addShirt.dropBody}</p>
             </div>
           </div>
           {quota === null ? null : outOfCredit ? (
             <p className="mt-3 flex items-start justify-center gap-1.5 rounded-[var(--radius)] border border-danger/40 bg-danger-soft px-3 py-2 text-xs text-danger">
               <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              No AI identifications left today ({quota.userLimit}/day on the{" "}
-              {quota.plan} plan). Pick a photo anyway — you can fill the details
-              in yourself.
+              {fill(t.addShirt.quotaNoneTitle, {
+                limit: quota.userLimit,
+                plan: quota.plan,
+              })}
             </p>
           ) : (
             <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-2">
               <Sparkles className="h-3.5 w-3.5" />
-              {quota.remaining} of {quota.userLimit} AI identifications left
-              today.
+              {fill(t.addShirt.quotaLeft, {
+                remaining: quota.remaining,
+                limit: quota.userLimit,
+              })}
             </p>
           )}
         </div>
@@ -361,10 +359,10 @@ export function AddShirtModal({
           </div>
           <div>
             <p className="font-display text-lg font-bold uppercase tracking-wide text-white">
-              Analyzing with AI…
+              {t.addShirt.analyzing}
             </p>
             <p className="mt-1 text-sm text-muted">
-              Identifying team, season, version and manufacturer.
+              {t.addShirt.analyzingBody}
             </p>
           </div>
         </div>
@@ -398,10 +396,10 @@ export function AddShirtModal({
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <ImagePlus className="h-4 w-4" />
-                  {shownImage ? "Change photo" : "Add photo"}
+                  {shownImage ? t.addShirt.changePhoto : t.addShirt.addPhoto}
                 </Button>
                 <p className="mt-1.5 text-xs text-muted-2">
-                  PNG or JPG, up to 10MB.
+                  {t.addShirt.photoHint}
                 </p>
               </div>
             </div>
@@ -411,9 +409,7 @@ export function AddShirtModal({
             {!isEditing && aiConfidence !== null && (
               <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/25 bg-accent-soft p-3 text-xs leading-relaxed text-accent">
                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                AI suggested these details ({aiConfidence}% confidence) —
-                correct anything that&apos;s wrong to help improve future
-                identifications.
+                {fill(t.addShirt.aiSuggested, { confidence: aiConfidence })}
               </p>
             )}
 
@@ -431,11 +427,11 @@ export function AddShirtModal({
               onClick={() => onOpenChange(false)}
               disabled={saving}
             >
-              Cancel
+              {t.addShirt.cancel}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isEditing ? "Save changes" : "Save to collection"}
+              {isEditing ? t.addShirt.saveEdit : t.addShirt.save}
             </Button>
           </DialogFooter>
         </form>

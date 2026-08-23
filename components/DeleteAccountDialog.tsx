@@ -14,6 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { fill } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
 
 interface DeleteAccountDialogProps {
   open: boolean;
@@ -27,6 +29,7 @@ export function DeleteAccountDialog({
   onOpenChange,
   email,
 }: DeleteAccountDialogProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const [confirmation, setConfirmation] = React.useState("");
   const [deleting, setDeleting] = React.useState(false);
@@ -65,23 +68,19 @@ export function DeleteAccountDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} className="max-w-md">
       <DialogHeader>
-        <DialogTitle>Delete your account</DialogTitle>
-        <DialogDescription>This cannot be undone.</DialogDescription>
+        <DialogTitle>{t.account.delete.title}</DialogTitle>
+        <DialogDescription>{t.account.delete.description}</DialogDescription>
       </DialogHeader>
 
       <div className="space-y-4 p-6">
         <div className="flex items-start gap-2 rounded-[var(--radius)] border border-danger/40 bg-danger-soft p-3 text-sm text-danger">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <div>
-            Every shirt in your collection, every photo you have uploaded and
-            your account itself will be permanently deleted. There is no way to
-            recover them.
-          </div>
+          <div>{t.account.delete.warning}</div>
         </div>
 
         <div>
           <Label htmlFor="confirm-email">
-            Type <span className="text-ink">{email}</span> to confirm
+            {fill(t.account.delete.confirmLabel, { email })}
           </Label>
           <Input
             id="confirm-email"
@@ -107,7 +106,7 @@ export function DeleteAccountDialog({
           onClick={() => onOpenChange(false)}
           disabled={deleting}
         >
-          Cancel
+          {t.account.delete.cancel}
         </Button>
         <Button
           type="button"
@@ -116,7 +115,7 @@ export function DeleteAccountDialog({
           className="bg-danger text-white hover:bg-danger/90 disabled:opacity-50"
         >
           {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
-          Delete my account
+          {t.account.delete.confirm}
         </Button>
       </DialogFooter>
     </Dialog>

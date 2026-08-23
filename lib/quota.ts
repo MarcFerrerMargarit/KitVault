@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fill } from "@/lib/i18n/format";
+import type { Messages } from "@/lib/i18n/messages/en";
 
 /**
  * How many AI identifications the signed-in user has left today.
@@ -115,13 +117,14 @@ export type QuotaDenialReason = "user_quota" | "global_quota" | "burst";
 export function quotaDenialMessage(
   reason: QuotaDenialReason,
   quota: QuotaStatus | null,
+  t: Messages,
 ): string {
   switch (reason) {
     case "user_quota":
-      return `You've used all ${quota?.userLimit ?? 0} AI identifications for today. Fill the details in manually, or come back tomorrow.`;
+      return fill(t.quota.denial.userQuota, { limit: quota?.userLimit ?? 0 });
     case "global_quota":
-      return "KitVault has reached today's shared AI limit. Fill the details in manually, or try again tomorrow.";
+      return t.quota.denial.globalQuota;
     case "burst":
-      return "Too many identifications happening at once. Wait a minute and try again, or fill the details in manually.";
+      return t.quota.denial.burst;
   }
 }

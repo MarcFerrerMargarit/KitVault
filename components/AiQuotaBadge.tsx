@@ -3,12 +3,15 @@
 import { Sparkles } from "lucide-react";
 import { useQuota } from "@/components/QuotaProvider";
 import { cn } from "@/lib/utils";
+import { fill } from "@/lib/i18n/format";
+import { useI18n } from "@/components/I18nProvider";
 
 /**
  * Always-visible counter of AI identifications left today. Hidden entirely
  * when the quota cannot be read, so a missing migration never breaks the page.
  */
 export function AiQuotaBadge({ className }: { className?: string }) {
+  const { t } = useI18n();
   const { quota } = useQuota();
   if (!quota) return null;
 
@@ -22,8 +25,13 @@ export function AiQuotaBadge({ className }: { className?: string }) {
   });
 
   const title = empty
-    ? `No AI identifications left. Your quota resets at ${resets}. You can still add shirts manually.`
-    : `${remaining} of ${userLimit} AI identifications left today (${quota.plan} plan). Resets at ${resets}.`;
+    ? fill(t.quota.tooltipEmpty, { time: resets })
+    : fill(t.quota.tooltip, {
+        remaining,
+        limit: userLimit,
+        plan: quota.plan,
+        time: resets,
+      });
 
   return (
     <span
@@ -43,7 +51,7 @@ export function AiQuotaBadge({ className }: { className?: string }) {
         {remaining}
         <span className="text-muted-2">/{userLimit}</span>
       </span>
-      <span className="hidden sm:inline">AI left today</span>
+      <span className="hidden sm:inline">{t.quota.left}</span>
     </span>
   );
 }
