@@ -391,6 +391,34 @@ export const es: Messages = {
     modelBusy:
       "Demasiadas identificaciones a la vez. Espera unos segundos y vuelve a intentarlo.",
     identifyFailed: "La identificación ha fallado: {error}",
+    supportTooShort: "Cuéntanos un poco más — al menos una frase entera.",
+    supportRateLimit:
+      "Ya nos has escrito unas cuantas veces. Inténtalo dentro de una hora.",
+    supportFailed: "No se ha podido enviar tu mensaje. Prueba en un momento.",
+  },
+
+  support: {
+    trigger: "Ayuda y comentarios",
+    title: "Ayuda y comentarios",
+    description:
+      "¿Algo no funciona, o echas de menos alguna cosa? Escríbelo aquí y nos llega directamente.",
+    categoryLabel: "¿De qué se trata?",
+    categories: {
+      bug: "Algo no funciona",
+      idea: "Una idea o petición",
+      question: "Una duda",
+      other: "Otra cosa",
+    },
+    messageLabel: "Tu mensaje",
+    messagePlaceholder:
+      "Cuantos más detalles, mejor — qué estabas haciendo, qué esperabas y qué pasó en su lugar.",
+    replyNote: "Te responderemos a {email}.",
+    cancel: "Cancelar",
+    send: "Enviar",
+    sending: "Enviando…",
+    sentTitle: "Mensaje enviado",
+    sentBody: "Gracias — los leemos todos. Te escribiremos.",
+    close: "Cerrar",
   },
 
   updatePassword: {

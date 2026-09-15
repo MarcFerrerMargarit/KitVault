@@ -378,6 +378,34 @@ export const en = {
     modelBusy:
       "Too many identifications at once. Wait a few seconds and try again.",
     identifyFailed: "Identification failed: {error}",
+    supportTooShort: "Tell us a little more — at least a full sentence.",
+    supportRateLimit:
+      "You have sent us a few messages already. Try again in an hour.",
+    supportFailed: "Could not send your message. Try again in a moment.",
+  },
+
+  support: {
+    trigger: "Help & feedback",
+    title: "Help & feedback",
+    description:
+      "Found something broken, or something you wish it did? Write it here and it reaches us straight away.",
+    categoryLabel: "What is this about?",
+    categories: {
+      bug: "Something is broken",
+      idea: "An idea or request",
+      question: "A question",
+      other: "Something else",
+    },
+    messageLabel: "Your message",
+    messagePlaceholder:
+      "The more detail the better — what you were doing, what you expected, what happened instead.",
+    replyNote: "We will reply to {email}.",
+    cancel: "Cancel",
+    send: "Send",
+    sending: "Sending…",
+    sentTitle: "Message sent",
+    sentBody: "Thank you — we read every one of these. We'll be in touch.",
+    close: "Close",
   },
 
   updatePassword: {

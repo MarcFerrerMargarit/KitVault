@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Settings, Sparkles, Trash2, User } from "lucide-react";
+import { LifeBuoy, LogOut, Settings, Sparkles, Trash2, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Brand } from "@/components/Brand";
 import { AiQuotaBadge } from "@/components/AiQuotaBadge";
 import { PlanBadge } from "@/components/PlanBadge";
 import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
+import { SupportDialog } from "@/components/SupportDialog";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -29,6 +30,7 @@ export function CollectionHeader({ email, plan }: CollectionHeaderProps) {
   const router = useRouter();
   const initials = email.slice(0, 2).toUpperCase();
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [supportOpen, setSupportOpen] = React.useState(false);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -44,6 +46,18 @@ export function CollectionHeader({ email, plan }: CollectionHeaderProps) {
         <div className="flex items-center gap-2 sm:gap-3">
           <PlanBadge plan={plan} />
           <AiQuotaBadge />
+          {/* Kept out of the account menu on purpose: while the app is being
+              tried out, the way to report a problem should be the one thing
+              nobody has to go looking for. */}
+          <button
+            type="button"
+            onClick={() => setSupportOpen(true)}
+            title={t.support.trigger}
+            aria-label={t.support.trigger}
+            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-[var(--radius)] text-muted transition-colors hover:bg-surface-2 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          >
+            <LifeBuoy className="h-[18px] w-[18px]" />
+          </button>
           <DropdownMenu trigger={<Avatar fallback={initials} />}>
             <DropdownMenuLabel>
               <span className="block text-[11px] uppercase tracking-wide text-muted-2">
@@ -85,6 +99,12 @@ export function CollectionHeader({ email, plan }: CollectionHeaderProps) {
       <DeleteAccountDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
+        email={email}
+      />
+
+      <SupportDialog
+        open={supportOpen}
+        onOpenChange={setSupportOpen}
         email={email}
       />
     </header>
