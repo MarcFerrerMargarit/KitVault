@@ -91,6 +91,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_URL`      | Supabase → Project Settings → API | yes                  |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API | yes (safe)           |
 | `GEMINI_API_KEY`                | Google AI Studio                  | **no — server only** |
+| `GEMINI_MODEL`                  | Optional; defaults to `gemini-2.5-flash` | **no — server only** |
 | `RESEND_API_KEY`                | Resend → API Keys                 | **no — server only** |
 | `SUPPORT_EMAIL`                 | Wherever feedback should land     | **no — server only** |
 | `SUPPORT_FROM`                  | Optional; an address at a domain verified in Resend | **no — server only** |
@@ -608,6 +609,31 @@ update public.profiles set plan = 'pro' where email = 'someone@example.com';
 
 `/api/identify` returns the authoritative `quota` object on both success and
 refusal, and the modal pushes it into the provider.
+
+### Choosing the model
+
+`GEMINI_MODEL` picks it; the default is `gemini-2.5-flash`. Changing it needs no
+deploy, and `ai_usage.model` records which one actually ran, so the ledger stays
+readable across a switch.
+
+**Stay on the Flash tier.** Identifying a shirt needs good vision, not deep
+reasoning — the response schema has already decided the shape of the answer — so
+Pro costs several times as much to think about a question that is not hard in
+that way. The cost difference between Flash models is not the deciding factor
+either: at these volumes, quadrupling the per-call price changes a month's bill
+by about a euro. Accuracy on obscure kits is what matters.
+
+**The default is on a deprecation path.** Google has announced the retirement of
+the 2.5 family, no earlier than 2026-10-16, with the replacement being a 3.x
+Flash. Check which ids are generally available in the AI Studio model list
+rather than trusting one written here — and when you switch, watch latency:
+`thinkingBudget: 0` is what keeps this fast, and the Gemini 3 models treat
+thinking differently.
+
+`ai_corrections` already stores what the model predicted against what the user
+saved, which is an accuracy measurement on the real task. It does not yet record
+_which_ model made the prediction — add that column before running a comparison
+that is supposed to mean something.
 
 ### Cost per identification
 

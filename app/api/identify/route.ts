@@ -14,8 +14,26 @@ import { getTranslations } from "@/lib/i18n/server";
 // get close to it. 60s is the most the Hobby plan allows.
 export const maxDuration = 60;
 
-// Cheap, fast, vision-capable model with structured output.
-const MODEL = "gemini-2.5-flash";
+/**
+ * Cheap, fast, vision-capable model with structured output. The Flash tier is
+ * the right trade here: identifying a shirt needs good vision, not deep
+ * reasoning, and Pro costs six times as much to think about something the
+ * response schema has already decided.
+ *
+ * Overridable so a different model can be tried — and reverted — from the
+ * hosting dashboard, without a deploy. `ai_usage.model` records which one
+ * actually ran, so the ledger stays honest across a switch.
+ *
+ * The default is on its way out: Google has announced the retirement of the
+ * 2.5 family, no earlier than 2026-10-16. The replacement is a 3.x Flash;
+ * check which are generally available in the AI Studio model list rather than
+ * trusting an id written here months ago.
+ *
+ * One thing to watch when moving: `thinkingBudget: 0` below is what keeps this
+ * fast and cheap, and the Gemini 3 models treat thinking differently. If a
+ * switch makes identification slow or pricier, look there first.
+ */
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
 /** Row returned by the `consume_ai_credit()` Postgres function. */
