@@ -1,0 +1,97 @@
+<!--
+  KitVault — "Confirm signup" template.
+  Paste into Supabase → Authentication → Emails → Templates → Confirm signup.
+  Subject: Activa tu vitrina de KitVault
+  Variables used: {{ .ConfirmationURL }}
+-->
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  Un clic y tu vitrina queda activada.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       bgcolor="#0d0d0f" style="background-color:#0d0d0f;margin:0;padding:0;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:520px;width:100%;">
+
+        <!-- Wordmark -->
+        <tr>
+          <td align="left" style="padding:0 4px 20px;">
+            <span style="font-family:'Arial Narrow',Arial,Helvetica,sans-serif;font-size:22px;
+                         font-weight:700;letter-spacing:0.16em;text-transform:uppercase;
+                         color:#f5f5f7;">KIT</span><span
+                  style="font-family:'Arial Narrow',Arial,Helvetica,sans-serif;font-size:22px;
+                         font-weight:700;letter-spacing:0.16em;text-transform:uppercase;
+                         color:#4ade80;">VAULT</span>
+          </td>
+        </tr>
+
+        <!-- Card -->
+        <tr>
+          <td bgcolor="#1a1a1f"
+              style="background-color:#1a1a1f;border:1px solid #2a2a33;border-radius:4px;
+                     padding:36px 32px;">
+
+            <h1 style="margin:0 0 14px;font-family:'Arial Narrow',Arial,Helvetica,sans-serif;
+                       font-size:28px;line-height:1.15;font-weight:700;letter-spacing:0.01em;
+                       text-transform:uppercase;color:#f5f5f7;">
+              Activa tu vitrina
+            </h1>
+
+            <p style="margin:0 0 26px;font-family:Arial,Helvetica,sans-serif;font-size:15px;
+                      line-height:1.6;color:#8a8a96;">
+              Ya casi está. Confirma tu correo y podrás empezar a catalogar tus camisetas:
+              la IA reconoce equipo, temporada y marca a partir de una foto.
+            </p>
+
+            <!-- Button -->
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td bgcolor="#4ade80" style="background-color:#4ade80;border-radius:4px;">
+                  <a href="{{ .ConfirmationURL }}"
+                     style="display:inline-block;padding:14px 30px;font-family:Arial,Helvetica,sans-serif;
+                            font-size:15px;font-weight:700;letter-spacing:0.02em;color:#0d0d0f;
+                            text-decoration:none;border-radius:4px;">
+                    Confirmar mi correo
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:26px 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:12px;
+                      line-height:1.5;color:#5f5f6b;">
+              ¿El botón no funciona? Copia esta dirección en tu navegador:
+            </p>
+            <p style="margin:0;font-family:'Courier New',Courier,monospace;font-size:11px;
+                      line-height:1.5;color:#8a8a96;word-break:break-all;">
+              {{ .ConfirmationURL }}
+            </p>
+
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:22px 4px 0;">
+            <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:12px;
+                      line-height:1.5;color:#5f5f6b;">
+              Si no has creado ninguna cuenta en KitVault, puedes ignorar este mensaje
+              sin hacer nada.
+            </p>
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;
+                      line-height:1.5;color:#5f5f6b;">
+              KitVault · kitvault.dev
+            </p>
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+</table>
