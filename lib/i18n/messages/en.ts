@@ -375,6 +375,8 @@ export const en = {
     noImage: "No image provided",
     imageTooLarge: "Image too large",
     emptyModel: "Empty response from the model",
+    modelBusy:
+      "Too many identifications at once. Wait a few seconds and try again.",
     identifyFailed: "Identification failed: {error}",
   },
 

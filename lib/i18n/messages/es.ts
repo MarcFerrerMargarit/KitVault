@@ -388,6 +388,8 @@ export const es: Messages = {
     noImage: "No se ha enviado ninguna imagen",
     imageTooLarge: "La imagen es demasiado grande",
     emptyModel: "El modelo ha devuelto una respuesta vacía",
+    modelBusy:
+      "Demasiadas identificaciones a la vez. Espera unos segundos y vuelve a intentarlo.",
     identifyFailed: "La identificación ha fallado: {error}",
   },
 

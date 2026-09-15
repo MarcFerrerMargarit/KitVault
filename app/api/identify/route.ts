@@ -204,6 +204,19 @@ fixed list. If unsure, still provide your best estimate.`;
     await releaseCredit(supabase, usageId);
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[identify] error:", message);
+
+    // Gemini's own rate limit, which several people uploading at the same
+    // moment will hit. Its raw text ("429 Too Many Requests: Resource has been
+    // exhausted") reaches the user's screen through `identifyFailed` below and
+    // reads like a bug in KitVault, so answer the one thing they can act on:
+    // nothing is broken, wait a moment and try again.
+    if (/\b429\b|RESOURCE_EXHAUSTED|rate limit/i.test(message)) {
+      return NextResponse.json(
+        { error: t.errors.modelBusy, reason: "model_busy" },
+        { status: 503, headers: { "Retry-After": "30" } },
+      );
+    }
+
     return NextResponse.json(
       { error: fill(t.errors.identifyFailed, { error: message }) },
       { status: 502 },
