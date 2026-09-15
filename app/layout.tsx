@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Oswald } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { getTranslations } from "@/lib/i18n/server";
 import { I18nProvider } from "@/components/I18nProvider";
 import "./globals.css";
@@ -38,6 +39,10 @@ export default async function RootLayout({
         <I18nProvider locale={locale} messages={t}>
           {children}
         </I18nProvider>
+        {/* Page views only, counted without cookies and without anything that
+            identifies a visitor — so it needs no consent banner, unlike the
+            usual analytics. Inert outside Vercel, so local runs count nothing. */}
+        <Analytics />
       </body>
     </html>
   );
