@@ -11,6 +11,7 @@ export const en = {
     pricing: "Pricing",
     login: "Login",
     signup: "Sign up",
+    myCollection: "My collection",
   },
 
   hero: {
@@ -21,6 +22,7 @@ export const en = {
     body: "KitVault is the home for your kits. Catalogue every shirt with AI, keep your archive perfectly organised, and share your collection with fellow collectors around the world.",
     ctaPrimary: "Get started free",
     ctaSecondary: "Log in",
+    ctaSignedIn: "Go to my collection",
   },
 
   features: {

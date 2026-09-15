@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/public";
 import { fill } from "@/lib/i18n/format";
 import type { Messages } from "@/lib/i18n/messages/en";
@@ -62,8 +63,16 @@ const FALLBACK: Plan[] = [
 /**
  * The public plan catalogue, straight from `plan_limits` — the same rows the
  * database enforces, so the pricing table cannot drift from reality.
+ *
+ * Cached for an hour rather than read on every request: plans change about
+ * never, and the landing page that shows them is rendered per-request so it can
+ * tell a signed-in visitor apart from a new one.
  */
-export async function fetchPlans(): Promise<Plan[]> {
+export const fetchPlans = unstable_cache(_fetchPlans, ["plan-catalogue"], {
+  revalidate: 3600,
+});
+
+async function _fetchPlans(): Promise<Plan[]> {
   try {
     const supabase = createPublicClient();
     const { data, error } = await supabase

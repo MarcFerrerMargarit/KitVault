@@ -12,6 +12,7 @@ import { KitMarquee } from "@/components/landing/KitMarquee";
 import { Pricing } from "@/components/landing/Pricing";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { fetchPlans } from "@/lib/plans";
+import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "@/lib/i18n/server";
 
 const GITHUB_URL = "https://github.com/MarcFerrerMargarit/KitVault";
@@ -32,11 +33,21 @@ function GithubIcon({ className }: { className?: string }) {
 
 const FEATURE_ICONS = [ScanSearch, SlidersHorizontal, Share2] as const;
 
-/** Plans change rarely; re-read them hourly rather than on every request. */
-export const revalidate = 3600;
-
+/**
+ * Rendered per request so it can greet a signed-in visitor properly. Sending
+ * them straight to `/collection` instead would be fewer clicks but would make
+ * the page unreachable for exactly the people most likely to share it — and for
+ * whoever runs the app, who is always signed in. The plan catalogue behind the
+ * pricing table stays cached for an hour, so this costs no extra query.
+ */
 export default async function LandingPage() {
-  const [plans, { t }] = await Promise.all([fetchPlans(), getTranslations()]);
+  const supabase = await createClient();
+  const [plans, { t }, { data: auth }] = await Promise.all([
+    fetchPlans(),
+    getTranslations(),
+    supabase.auth.getUser(),
+  ]);
+  const signedIn = Boolean(auth.user);
   const features = [t.features.identify, t.features.filter, t.features.share];
 
   return (
@@ -52,16 +63,27 @@ export default async function LandingPage() {
             >
               {t.nav.pricing}
             </Link>
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                {t.nav.login}
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button variant="primary" size="sm">
-                {t.nav.signup}
-              </Button>
-            </Link>
+            {signedIn ? (
+              <Link href="/collection">
+                <Button variant="primary" size="sm">
+                  {t.nav.myCollection}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm">
+                    {t.nav.login}
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button variant="primary" size="sm">
+                    {t.nav.signup}
+                  </Button>
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -96,17 +118,28 @@ export default async function LandingPage() {
             className="reveal mt-9 flex flex-col items-center gap-3 sm:flex-row"
             style={{ animationDelay: "280ms" }}
           >
-            <Link href="/signup">
-              <Button size="lg">
-                {t.hero.ctaPrimary}
-                <ArrowRight className="h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button size="lg" variant="outline">
-                {t.hero.ctaSecondary}
-              </Button>
-            </Link>
+            {signedIn ? (
+              <Link href="/collection">
+                <Button size="lg">
+                  {t.hero.ctaSignedIn}
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/signup">
+                  <Button size="lg">
+                    {t.hero.ctaPrimary}
+                    <ArrowRight className="h-5 w-5" />
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button size="lg" variant="outline">
+                    {t.hero.ctaSecondary}
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
 

@@ -9,6 +9,7 @@ export const es: Messages = {
     pricing: "Precios",
     login: "Entrar",
     signup: "Crear cuenta",
+    myCollection: "Mi colección",
   },
 
   hero: {
@@ -19,6 +20,7 @@ export const es: Messages = {
     body: "KitVault es el hogar de tus camisetas. Cataloga cada una con IA, mantén tu archivo impecable y comparte tu colección con coleccionistas de todo el mundo.",
     ctaPrimary: "Empezar gratis",
     ctaSecondary: "Entrar",
+    ctaSignedIn: "Ir a mi colección",
   },
 
   features: {
