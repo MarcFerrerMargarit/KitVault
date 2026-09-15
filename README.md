@@ -3,9 +3,10 @@
 A web app to **collect and organize football shirts**. Photograph a shirt, let
 AI identify it, and build a clean, private archive of every jersey you own.
 
-> **Status — feature-complete for a first release.** Real auth, a Postgres
-> database, private photo storage, Gemini Vision identification, per-plan
-> limits and account deletion. Not yet wired up: taking payments — see
+> **Status — live and open to testers.** Real auth with working transactional
+> email, a Postgres database, private photo storage, Gemini Vision
+> identification on Gemini's paid tier, per-plan limits, account deletion and an
+> in-app help form. Not yet wired up: taking payments — see
 > [Before charging anyone](#before-charging-anyone). Needs a Supabase project
 > and a Gemini API key to run (see [Setup](#setup)).
 
@@ -14,11 +15,13 @@ AI identify it, and build a clean, private archive of every jersey you own.
 - **Next.js 16** (App Router) + **React 19**
 - **Supabase** — auth (email + password), Postgres with RLS, private Storage
 - **Google Gemini** (`gemini-2.5-flash`) for shirt identification
+- **Resend** — SMTP for Supabase's auth email, and the API behind the help form
 - **Tailwind CSS v4** (dark-only design system)
 - **TypeScript** (strict, no `any`)
 - **d3-geo** + **world-atlas** for the collection map (server-side projection)
 - English + Spanish, via a typed dictionary in `lib/i18n` (no library)
 - **Lucide React** icons, shadcn/ui-style primitives built locally in `components/ui`
+- **Vercel Web Analytics** — page views, counted without cookies
 
 ## Setup
 
@@ -48,6 +51,12 @@ Create a project at [supabase.com](https://supabase.com), then:
    - `004_plan_features_and_pricing.sql` — **required**. Bulk upload as a plan
      feature, plan prices, and public read access for the pricing table.
    - `005_upgrade_interest.sql` — **required**. The upgrade waiting list.
+   - `006_resize_ai_fuse.sql` — resizes the app-wide AI ceiling in `ai_limits`.
+     Its defaults were sized for Gemini's free tier; **read the comments before
+     running it** — which pair of numbers is right depends on whether the Google
+     project has billing linked. See [AI quota](#ai-quota).
+   - `007_support_messages.sql` — **required for the help form**. The feedback
+     table and the rationed function that writes to it.
 3. **Authentication → URL Configuration** → set the Site URL to
    `http://localhost:3000` and add `http://localhost:3000/**` to the redirect
    allow-list. The wildcard matters: password-reset links come back as
@@ -58,12 +67,20 @@ Create a project at [supabase.com](https://supabase.com), then:
 
 ### 3. Gemini API key
 
-Get a free key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+Get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 It is used server-side only, by `POST /api/identify`.
+
+A key works straight away on the free tier, which is fine for development. For
+anything with real users, link a billing account to the Google project — not for
+the quota but for the terms: **free-tier content may be used to improve Google's
+products, and what this app submits is photographs uploaded by users.** The paid
+tier excludes prompts and responses from training. The tier belongs to the
+_project_, not to the key or the account, and a Google One subscription has
+nothing to do with it.
 
 ### 4. Environment variables
 
-Copy [`.env.example`](.env.example) to `.env.local` and fill in the three values:
+Copy [`.env.example`](.env.example) to `.env.local` and fill it in:
 
 ```bash
 cp .env.example .env.local
@@ -74,6 +91,13 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_URL`      | Supabase → Project Settings → API | yes                  |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API | yes (safe)           |
 | `GEMINI_API_KEY`                | Google AI Studio                  | **no — server only** |
+| `RESEND_API_KEY`                | Resend → API Keys                 | **no — server only** |
+| `SUPPORT_EMAIL`                 | Wherever feedback should land     | **no — server only** |
+| `SUPPORT_FROM`                  | Optional; an address at a domain verified in Resend | **no — server only** |
+
+The first three are required to run the app at all. Without the Resend pair the
+[help form](#help-and-feedback) still records what people write, it just does not
+email anyone about it.
 
 `.env.local` is gitignored. Restart `npm run dev` after changing it.
 
@@ -97,40 +121,66 @@ project — but read the "when you start paying" note at the end first.
 
 ### What it actually costs
 
-| Piece               | Cost         | Notes                                             |
-| ------------------- | ------------ | ------------------------------------------------- |
-| Domain (`.com`)     | ~€10-15/year | The only unavoidable payment                      |
-| Hosting (Vercel)    | €0           | Hobby plan — **non-commercial use only**          |
-| Database (Supabase) | €0           | Free tier; the project pauses after a week idle   |
-| Transactional email | €0           | Resend/similar free tier — see step 5             |
-| Gemini              | €0           | The same free-tier key, see [AI quota](#ai-quota) |
-| HTTPS certificate   | €0           | Issued and renewed automatically                  |
+Running for a group of testers, with nobody paying anything yet:
+
+| Piece               | Cost          | Notes                                                  |
+| ------------------- | ------------- | ------------------------------------------------------ |
+| Domain              | ~€10-12/year  | At cost from Cloudflare; renews at the same price       |
+| Hosting (Vercel)    | €0            | Hobby plan — **non-commercial use only**                |
+| Database (Supabase) | €0            | Free tier; the project pauses after a week idle         |
+| Transactional email | €0            | Resend free tier: 3,000/month, 100/day                  |
+| Analytics           | €0            | Vercel Web Analytics, included on Hobby                 |
+| Gemini              | ~€0.0007/photo | Pay as you go; see [AI quota](#ai-quota)               |
+| HTTPS certificate   | €0            | Issued and renewed automatically                        |
+
+The Gemini figure is the only one that moves, and it moves slowly: twenty people
+cataloguing twenty-five shirts each comes to about **$0.37 in total**. A €10
+prepaid balance covers roughly 14,000 identifications.
+
+Going commercial is a different bill — see
+[When you start paying](#when-you-start-paying).
 
 ### Checklist
 
 1. **Push to GitHub** — done; Vercel deploys from the repo.
 2. **Create a Vercel account** and import the repo. It detects Next.js on its
    own; no build settings to change.
-3. **Set the three environment variables** in Vercel → Settings →
-   Environment Variables (the same ones as `.env.local`). `GEMINI_API_KEY` must
-   _not_ be prefixed with `NEXT_PUBLIC_`, or it ends up in the browser bundle.
-4. **Point the domain at Vercel** — buy it anywhere, add it under Vercel →
-   Domains, and set the DNS records it gives you. HTTPS is automatic.
-5. **Configure custom SMTP in Supabase** → Authentication → Emails. This is not
-   optional: the built-in sender is capped at **2 emails per hour for the whole
-   project**, and signup depends on a confirmation email, so the third person to
-   register in an hour silently gets nothing. A custom SMTP provider raises it
-   to 30/hour, adjustable.
+3. **Set the environment variables** in Vercel → Settings → Environment
+   Variables (the same ones as `.env.local`). None of the server-only ones may
+   be prefixed with `NEXT_PUBLIC_`, or they end up in the browser bundle. They
+   only take effect on a **new build**, so redeploy after adding them.
+4. **Point the domain at Vercel** — add it under Vercel → Domains and set the
+   DNS records it gives you. HTTPS is automatic. Two things bite here: on
+   Cloudflare every record Vercel asks for must be **DNS only** (grey cloud),
+   because a proxied record leaves two services fighting over the certificate;
+   and on a `.dev` domain the whole TLD is HSTS-preloaded, so nothing loads at
+   all until the certificate exists — an early failure is not a misconfiguration.
+5. **Set up email properly.** This is not optional: Supabase's built-in sender
+   does **2 emails per hour** and **refuses to deliver to anyone outside the
+   project's team**, so password resets fail silently for every real user.
+   1. Verify a domain in [Resend](https://resend.com) and publish the DKIM, SPF
+      and MX records it asks for (its Cloudflare auto-configure does this).
+   2. Supabase → Authentication → Emails → SMTP Settings: host
+      `smtp.resend.com`, port `465`, username `resend`, password **the Resend
+      API key** — not a password you invent.
+   3. Paste the templates from
+      [`supabase/email-templates/`](supabase/email-templates/), subject lines
+      included. The defaults arrive in English and never say which app they are
+      from.
 6. **Update Supabase → Authentication → URL Configuration**: set the Site URL to
-   the real domain and add `https://yourdomain.com/**` to the redirect
-   allow-list. Otherwise confirmation links keep pointing at `localhost:3000`.
-   No code change is needed — the app derives its origin from the request.
+   the real domain and add `https://yourdomain/**` to the redirect allow-list.
+   Otherwise confirmation links keep pointing at `localhost:3000`. No code change
+   is needed — the app derives its origin from the request. Keep the pattern
+   tight: anything broad enough to match other people's deployments turns their
+   sites into valid destinations for your auth tokens.
 7. **Run the migrations** against the production database (`schema.sql` if it
-   is a fresh project, then `001` through `005`). `/api/identify` returns 500
-   until `002` has run, and the paywall does not exist until `003` has.
-8. **Check it end to end**: sign up with a real address, confirm, add a shirt
-   with a photo, watch the quota counter go down — then log out, use
-   **Forgot it?** and complete a password reset.
+   is a fresh project, then `001` through `007`). `/api/identify` returns 500
+   until `002` has run, the paywall does not exist until `003` has, and the help
+   form fails until `007` has.
+8. **Check it end to end**: sign up with a real address that is _not_ a project
+   team member, confirm, add a shirt with a photo, watch the quota counter go
+   down — then log out, use **Forgot it?** and complete a password reset. Send
+   yourself something through the help form last.
 
 ### One Supabase project or two?
 
@@ -146,8 +196,15 @@ project when that starts to matter.
   today, but the day you charge anyone, this needs Vercel Pro ($20/month/member).
 - **Supabase free** pauses a project after a week of inactivity and gives 500 MB
   of database and 1 GB of storage for photos. Pro is $25/month.
-- **Gemini** stays free until you exceed the project's daily quota; the caps in
-  [AI quota](#ai-quota) exist to keep you inside it.
+- **Gemini** is already on the paid tier and bills per token, so nothing changes
+  there — but the caps in [AI quota](#ai-quota) are what stand between a bug and
+  a surprise invoice.
+
+Roughly: **$45/month fixed** for Vercel Pro and Supabase Pro, plus usage. At
+€4.99/month through a merchant of record you keep about €3.42 after VAT and
+fees, so it takes about **13 paying subscribers** to cover the hosting. The
+variable costs stay negligible far past that — infrastructure is not the
+constraint on this product, conversion is.
 
 ## Routes
 
@@ -161,6 +218,7 @@ project when that starts to matter.
 | `/auth/callback`     | Exchanges the Supabase confirmation code for a session            |
 | `/collection`        | The collection — server-rendered from Postgres; auth-protected    |
 | `POST /api/identify` | Gemini Vision identification (auth required, 10 MB image limit)   |
+| `POST /api/support`  | Records a help-form message and emails it on (auth required)      |
 | `GET /api/world-map` | Projected country outlines for the map view (static, cached)      |
 
 `middleware.ts` refreshes the Supabase session on every request, gates
@@ -341,10 +399,28 @@ owner or to trust the address for a password reset.
 
 Password recovery is **not** affected by that setting — it always emails.
 
-Either way, configure a custom SMTP sender before letting people in: Supabase's
-built-in one sends **2 emails per hour for the whole project**. That is enough
-to test the reset flow on your own address a couple of times, and nowhere near
-enough for real users. See step 5 of the [deployment checklist](#checklist).
+Either way, configure a custom SMTP sender before letting people in. Supabase's
+built-in one has two limits and the second is the one that catches people out:
+it sends **2 emails per hour for the whole project**, and it **only delivers to
+addresses on the project's team**. Everything looks fine while you test on your
+own address and then fails silently for every real user — the reset screen still
+says "check your email", because
+[it deliberately never reveals whether an address has an account](#signing-up-and-getting-back-in).
+See step 5 of the [deployment checklist](#checklist).
+
+### The templates
+
+Supabase keeps auth email templates in its dashboard, outside the repository,
+where they are invisible to review and easy to lose. The source of truth is
+[`supabase/email-templates/`](supabase/email-templates/); edit there, then paste.
+
+Two things about them are worth knowing. The **subject is a separate field** from
+the body, so changing only the body leaves an English subject on a Spanish email.
+And Supabase picks a template by _type_, not by recipient, so these **cannot
+follow the user's chosen language** the way the rest of the app does — they are
+written in Spanish, and an English-speaking user still gets a Spanish email.
+Fixing that properly means sending the mail from the app rather than from
+Supabase Auth.
 
 ## Plans and limits
 
@@ -455,15 +531,41 @@ entirely, and the function can only ever delete its own caller.
 ## AI quota
 
 Every account shares one `GEMINI_API_KEY`, and **Gemini rate limits are applied
-per project, not per key** — so a second key would not buy more capacity. Two
-independent limits guard the budget, both enforced in Postgres:
+per project, not per key** — so a second key would not buy more capacity. Google
+also has no idea who the app's users are: it bills one project for one stream of
+requests, and attributing that to individual people is entirely this app's job.
+That is what `ai_usage` is for.
 
-| Limit                        | Default              | Where it lives                                                                  |
-| ---------------------------- | -------------------- | ------------------------------------------------------------------------------- |
-| Per-user identifications/day | 5 (free) / 100 (pro) | `plan_limits.daily_identifications` (see [Plans and limits](#plans-and-limits)) |
-| App-wide identifications/day | 150                  | `ai_limits.global_daily_limit`                                                  |
-| App-wide requests/minute     | 6                    | `ai_limits.global_burst_per_minute`                                             |
-| Counter reset timezone       | Europe/Madrid        | `ai_limits.reset_timezone`                                                      |
+Two _different_ things are rationed, and conflating them is the usual mistake:
+
+| Limit                        | Default              | What it is                                                                       |
+| ---------------------------- | -------------------- | -------------------------------------------------------------------------------- |
+| Per-user identifications/day | 5 (free) / 100 (pro) | **The user's allowance.** `plan_limits.daily_identifications`, counted per `user_id` |
+| App-wide identifications/day | 800                  | **A fuse on the bill.** `ai_limits.global_daily_limit`                            |
+| App-wide requests/minute     | 60                   | The same fuse, per minute. `ai_limits.global_burst_per_minute`                    |
+| Counter reset timezone       | Europe/Madrid        | `ai_limits.reset_timezone`                                                        |
+
+The second pair is **not a pool shared between users** — it is the ceiling a bug
+or an abusive account cannot push past, and it should never fire in normal use.
+It matters that it does not, because `ai_quota_status()` reports
+`least(user_remaining, global_remaining)`: a fuse running low drags down the
+number _every_ user sees however little they have spent, and refuses them with
+`global_quota`, which reads as a bug in the app rather than a limit of their
+plan. Keep it comfortably above (expected active users × their daily allowance).
+
+Size it under whatever Google allows, so the cut is yours and not theirs:
+
+| Google project tier | Google allows (approx) | Sensible fuse    |
+| ------------------- | ---------------------- | ---------------- |
+| Free                | 250/day, 10/min        | 200/day, 6/min   |
+| Tier 1 (billing linked) | 1,000/day, 150/min | 800/day, 60/min  |
+
+Google no longer publishes a stable table and the real numbers are per project,
+so check yours at
+[aistudio.google.com/rate-limit](https://aistudio.google.com/rate-limit) rather
+than trusting the column above. Note the two counters do not line up: Google
+resets daily quotas at **midnight Pacific**, `reset_timezone` here is
+Europe/Madrid — another reason not to set the fuse near Google's ceiling.
 
 Change any of them with an `UPDATE` — no redeploy needed. There is no payment
 integration yet; upgrade someone by hand:
@@ -486,6 +588,11 @@ update public.profiles set plan = 'pro' where email = 'someone@example.com';
 - Refusals return **429** with a reason (`user_quota`, `global_quota`, `burst`)
   and a human message. The app never hard-blocks: the Add Shirt modal drops
   straight to the manual form, and saving shirts is never rationed.
+- A **429 from Gemini itself** — several people uploading in the same moment —
+  is caught separately and answered with a **503** and a `Retry-After`. Left to
+  the generic handler its raw text ("429 Too Many Requests: Resource has been
+  exhausted") reaches the screen and reads like a bug in KitVault, which is what
+  testers then report.
 - The route is **fail-closed** — if the quota functions are missing it returns
   500 rather than spending money, so run the migration before deploying.
 
@@ -510,7 +617,20 @@ A shirt photo costs roughly 1,000-1,800 input tokens (images are billed as
 (`thinkingBudget: 0`): thinking tokens bill as output at $2.50/1M and buy
 nothing when the answer is constrained by a response schema.
 
-Check what you are actually spending:
+That is an estimate from how Gemini tiles an image. Once there is traffic,
+`ai_usage` holds the real token counts — replace it with your own number:
+
+```sql
+select count(*) as calls,
+       round(avg(input_tokens))  as avg_in,
+       round(avg(output_tokens)) as avg_out,
+       round((avg(input_tokens)/1e6*0.30
+            + avg(output_tokens)/1e6*2.50)::numeric, 6) as usd_per_call
+  from public.ai_usage
+ where status = 'success';
+```
+
+And who is spending it today:
 
 ```sql
 select u.user_id, count(*) filter (where u.status = 'success') as calls,
@@ -520,10 +640,46 @@ select u.user_id, count(*) filter (where u.status = 'success') as calls,
  group by u.user_id order by calls desc;
 ```
 
-Your project's real Gemini rate limits are at
-[aistudio.google.com/rate-limit](https://aistudio.google.com/rate-limit) —
-Google no longer publishes a stable table, so set `global_daily_limit` from
-what the dashboard reports.
+## Help and feedback
+
+A lifebuoy in the collection header opens a form: a category (broken / idea /
+question / other) and a message. It sits in the header rather than inside the
+account menu on purpose — while the app is being tried out, reporting a problem
+should be the one thing nobody has to go looking for.
+
+`POST /api/support` writes the message to `support_messages` **before** it tries
+to email anything, and a send failure is logged rather than shown to the user.
+Email is a notification: it bounces, it lands in spam, it gets deleted. Losing
+what somebody took the trouble to write because a mail server had a bad minute
+would be the worse outcome, and the table can be read directly when it happens:
+
+```sql
+select m.created_at, u.email, m.category, m.page, m.message
+  from public.support_messages m
+  join auth.users u on u.id = m.user_id
+ order by m.created_at desc;
+```
+
+The mail carries the message plus who sent it, from which page and in which
+language, and its **reply-to is the sender's own address** — replying in a mail
+client answers them.
+
+Submissions are rationed (5/hour, 20/day per user, in `support_limits`) by
+`submit_support_message()` rather than an RLS insert policy: a form that mails a
+fixed address is a spam relay otherwise, and counting and inserting under one
+advisory lock is the only way two quick clicks cannot both pass the check.
+
+Resend is reached over its REST API rather than its SDK — one POST does not
+justify a dependency, and the key is already there for auth email.
+
+## Analytics
+
+`<Analytics />` from `@vercel/analytics` sits in the root layout. It counts page
+views **without cookies and without storing anything that identifies a
+visitor**, so it needs no consent banner — the reason to prefer it here over the
+usual analytics, which would cost a banner and a chapter of privacy policy just
+to count visits. It needs no key: on Vercel it knows its own project, and
+anywhere else it is inert, so local runs do not pollute the numbers.
 
 ## Project structure
 
@@ -535,7 +691,8 @@ app/
   collection/page.tsx      # Collection dashboard (server component)
   collection/actions.ts    # Server Actions: create / update / delete shirt
   api/identify/route.ts    # Gemini Vision identification endpoint
-  layout.tsx               # Fonts (Oswald display / Inter body) + metadata
+  api/support/route.ts     # Help form: records the message, then emails it on
+  layout.tsx               # Fonts, metadata, Vercel Analytics
   icon.svg                 # Browser tab icon — the K mark, drawn as paths
   apple-icon.png           # 180px iOS home-screen icon
   favicon.ico              # 32px fallback for older browsers
@@ -557,6 +714,7 @@ components/
   BulkJobBadge.tsx         # Floating progress pill for a background batch
   ShirtFields.tsx          # The editable shirt fields, shared by both flows
   DeleteAccountDialog.tsx  # GDPR account deletion, confirmed by email
+  SupportDialog.tsx        # The help / feedback form
   PlanBadge.tsx            # Free/Pro chip in the header; free links to /upgrade
   UpgradeInterest.tsx      # Joins the waiting list
   auth/AuthForm.tsx        # Shared login / signup form
@@ -579,6 +737,8 @@ lib/
 supabase/
   schema.sql               # Full database + storage setup
   migrations/              # Incremental SQL applied on top of an older schema
+  email-templates/         # Auth email HTML — the source for what is pasted
+                           # into the Supabase dashboard
 ```
 
 ## Data model
@@ -596,6 +756,11 @@ RLS is what actually enforces the separation — it holds even against someone
 using the public anon key directly. The queries in `app/collection/` _also_
 filter by `user_id` even though the policies make it redundant, so that a
 dropped or disabled policy cannot quietly turn into a data leak.
+
+Three tables are readable by their owner but **never directly writable**:
+`ai_usage`, `support_messages` and the `*_limits` rows behind them. Every write
+goes through a `security definer` function, because each one enforces a ration
+and a check-then-insert split across two statements is a check that can be raced.
 
 ## Design system
 
@@ -618,24 +783,50 @@ Tokens live in `app/globals.css` under `@theme` (e.g. `bg-bg`, `text-accent`,
 - ✅ **Phase 3.5** — Per-user AI quota + global daily cap (see [AI quota](#ai-quota))
 - ✅ **Phase 3.6** — Interactive world map of the collection (see
   [The map view](#the-map-view))
-- 🔜 **Phase 4** — Automatic reference-image enrichment
-- 🔜 **Phase 5** — Model improvement from correction feedback (`ai_corrections`
-  is already collecting the data)
 - ✅ **Phase 3.7** — Per-plan collection limit + account deletion (see
   [Plans and limits](#plans-and-limits))
 - ✅ **Phase 3.8** — Bulk upload for paid plans + a pricing table on the landing
   page driven by `plan_limits` (see [Bulk upload](#bulk-upload-pro))
+- ✅ **Phase 3.9** — Shipped to testers: own domain, real transactional email on
+  a verified domain, branded templates, an in-app
+  [help form](#help-and-feedback) and [page-view analytics](#analytics)
+- 🔜 **Phase 4** — Automatic reference-image enrichment
+- 🔜 **Phase 5** — Model improvement from correction feedback (`ai_corrections`
+  is already collecting the data)
 - 🔜 **Phase 6** — Social profiles, collection stats, PWA
 
 ### Before charging anyone
 
-- **Payments.** Nothing is integrated; `profiles.plan` is set by hand. For EU
-  consumers, a merchant of record (Paddle, Lemon Squeezy) handles VAT that
-  Stripe would leave to you.
-- **Move Gemini to the paid tier.** Free-tier content may be used to improve
-  Google's products, and the inputs here are photos uploaded by paying users.
+- **Payments.** Nothing is integrated, and **nothing in the codebase ever sets
+  `profiles.plan` to `pro`** — it defaults to `free` and stays there until
+  someone runs the `UPDATE` by hand. A real integration needs a checkout, a
+  webhook route that verifies its signature, and a `security definer` function to
+  move the plan, since users must not be able to write that column. For EU
+  consumers a merchant of record (Paddle, Lemon Squeezy) handles VAT that Stripe
+  would leave to you — budget about a third of a €4.99 price to VAT and fees, and
+  note the flat per-transaction part is what hurts at that price point.
+- **Decide what a downgrade does.** A Pro user with 400 shirts who cancels drops
+  to a 25-shirt plan. The `shirts_enforce_limit` trigger fires `before insert`
+  only, so their shirts survive and they simply cannot add another. That is
+  forgiving and probably right, but today it is an accident of implementation
+  rather than a decision — confirm it, then write it into the terms.
+- ✅ **Gemini is on the paid tier**, so prompts and responses are excluded from
+  training. Keep it that way.
 - **Vercel Hobby forbids commercial use**, and Supabase's free tier pauses a
   project after a week idle — both need their paid plans. See
   [Deployment](#deployment).
 - **Terms, privacy policy and legal entity.** The account deletion above covers
-  the right to erasure; the paperwork is still yours to do.
+  the right to erasure; portability still needs an export button. The policy has
+  to name the sub-processors: Google (photographs sent for identification),
+  Supabase (accounts and image storage, with the region), Resend (email), Vercel
+  (hosting and analytics), and whoever ends up taking the money.
+
+### Known things to watch
+
+- **Signed photo URLs are re-minted hourly** (`app/collection/page.tsx`). Each
+  fresh signature is a new cache key, so the CDN misses and the bytes come off
+  Supabase origin again. Raising the expiry is the single highest-leverage
+  change if egress ever becomes the bill.
+- **Pro's 100 identifications/day** is generous against what a Pro subscription
+  would net. Nobody catalogues 100 shirts a day for a month, but `ai_usage` is
+  where you would see it if they did.
