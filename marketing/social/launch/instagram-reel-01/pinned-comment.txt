@@ -1,0 +1,3 @@
+How it works: photo → AI fills in team, season, version and maker, with a confidence % → you check it → it's in your vault. Wrong guess? Just correct it before you save.
+
+Drop a shirt you own below and we'll run the trickiest ones through KitVault in the next Reel ⚽
