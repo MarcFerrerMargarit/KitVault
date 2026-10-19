@@ -57,6 +57,9 @@ Create a project at [supabase.com](https://supabase.com), then:
      project has billing linked. See [AI quota](#ai-quota).
    - `007_support_messages.sql` — **required for the help form**. The feedback
      table and the rationed function that writes to it.
+   - `008_profile_fields_and_plan_lock.sql` — **required, and a security fix**.
+     Adds the profile fields, and stops users from editing their own `plan`
+     (see [Who can change what](#who-can-change-what)).
 3. **Authentication → URL Configuration** → set the Site URL to
    `http://localhost:3000` and add `http://localhost:3000/**` to the redirect
    allow-list. The wildcard matters: password-reset links come back as
@@ -222,6 +225,7 @@ constraint on this product, conversion is.
 | `/update-password`   | Set a new password after following that link                      |
 | `/auth/callback`     | Exchanges the Supabase confirmation code for a session            |
 | `/collection`        | The collection — server-rendered from Postgres; auth-protected    |
+| `/profile`           | Name, photo, favourite team, bio, stats and account actions; auth-protected |
 | `POST /api/identify` | Gemini Vision identification (auth required, 10 MB image limit)   |
 | `POST /api/support`  | Records a help-form message and emails it on (auth required)      |
 | `GET /api/export`    | Everything held about the user, as a JSON download (auth required) |
@@ -538,6 +542,33 @@ It is a `security definer` function rather than a call with the service_role
 key deliberately: the app never has to hold a credential that bypasses RLS
 entirely, and the function can only ever delete its own caller.
 
+## Profile
+
+`/profile`, from **Profile** in the account menu, holds a name, a photo, a
+favourite team and a short bio, plus the collection's headline numbers and the
+account actions (change password, download data, delete account). The name and
+photo replace the email initials in the header.
+
+The page says plainly that the profile is private. Nothing is public in
+KitVault yet, and people should not fill this in for an audience that does not
+exist. When public collection pages ship, this is what they will show.
+
+- **The photo** is cropped to a centred square and scaled to 320px in the
+  browser, which also strips its EXIF — GPS included — exactly as shirt photos
+  are. It is stored in the user's own folder of the `shirts` bucket as
+  `<uid>/avatar-<uuid>.jpg`, on purpose: the storage policies already confine a
+  user to that folder, and account deletion already empties it, so the avatar
+  needed no new rules and cannot be left behind. A CHECK constraint keeps
+  `avatar_path` inside the owner's own folder, so the column cannot be used to
+  make the app sign someone else's photo. Replacing or removing it deletes the
+  old file.
+- **Limits** (40 / 60 / 280 characters) are CHECK constraints, not just form
+  attributes — the form is only one client of the table, and the anon key is
+  public.
+- **Favourite team** suggests the teams already in the collection.
+- **Change password** links to `/update-password`, which works for a signed-in
+  user as well as after a recovery link.
+
 ## Exporting your data
 
 **Download my data**, in the same menu, is the other half of the GDPR pair:
@@ -839,6 +870,7 @@ app/
   api/support/route.ts     # Help form: records the message, then emails it on
   api/export/route.ts      # GDPR data export as a JSON download
   privacy/, terms/         # Legal pages, rendered from lib/legal
+  profile/                 # Profile page and its server actions
   layout.tsx               # Fonts, metadata, Vercel Analytics
   icon.svg                 # Browser tab icon — the K mark, drawn as paths
   apple-icon.png           # 180px iOS home-screen icon
@@ -863,6 +895,7 @@ components/
   DeleteAccountDialog.tsx  # GDPR account deletion, confirmed by email
   SupportDialog.tsx        # The help / feedback form
   legal/LegalDocument.tsx  # Shared layout for the privacy policy and terms
+  profile/                 # ProfileForm (photo + fields), AccountSection
   PlanBadge.tsx            # Free/Pro chip in the header; free links to /upgrade
   UpgradeInterest.tsx      # Joins the waiting list
   auth/AuthForm.tsx        # Shared login / signup form
@@ -877,6 +910,7 @@ lib/
   image.ts                 # Browser-side downscaling + thumbnail paths
   plans.ts                 # Public plan catalogue for the pricing table
   legal/                   # Privacy policy + terms text, and the operator facts they need
+  profile.ts               # Profile reader, field limits, initials
   world-map.ts             # Projects the country outlines (server only)
   country-match.ts         # Free-text country → map country
   types.ts                 # Domain types
@@ -910,6 +944,21 @@ Three tables are readable by their owner but **never directly writable**:
 `ai_usage`, `support_messages` and the `*_limits` rows behind them. Every write
 goes through a `security definer` function, because each one enforces a ration
 and a check-then-insert split across two statements is a check that can be raced.
+
+### Who can change what
+
+RLS decides which **rows** a user may touch; it says nothing about which
+**columns**. Until migration 008, `profiles_update_own` therefore let a user
+update every column of their own profile — `plan` included — so anyone with the
+public anon key and a session could make themselves Pro for free.
+
+Migration 008 revokes table-wide UPDATE on `profiles` and grants it back only on
+`display_name`, `bio`, `favourite_team` and `avatar_path`. Column privileges
+apply on top of RLS, and `security definer` functions run as the table owner, so
+the quota functions — and a future payment webhook — can still set the plan.
+
+**When adding a column a user must not edit, check this list.** It is the line
+between "my profile" and "what I have paid for", and RLS will not draw it.
 
 ## Design system
 

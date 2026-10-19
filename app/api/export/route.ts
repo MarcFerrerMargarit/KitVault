@@ -36,7 +36,7 @@ export async function GET() {
     await Promise.all([
       supabase
         .from("profiles")
-        .select("email, display_name, plan, created_at")
+        .select("email, display_name, bio, favourite_team, avatar_path, plan, created_at")
         .eq("id", user.id)
         .maybeSingle(),
       supabase
@@ -78,15 +78,21 @@ export async function GET() {
   }
 
   const shirtRows = shirts.data ?? [];
+  const avatarPath = (profile.data?.avatar_path as string | null) ?? null;
   const paths = shirtRows
     .map((s) => s.image_path as string | null)
     .filter((p): p is string => Boolean(p));
 
   const linkByPath = new Map<string, string>();
-  if (paths.length > 0) {
+  const toSign = [
+    ...paths,
+    ...paths.map(thumbPath),
+    ...(avatarPath ? [avatarPath] : []),
+  ];
+  if (toSign.length > 0) {
     const { data: signed } = await supabase.storage
       .from("shirts")
-      .createSignedUrls([...paths, ...paths.map(thumbPath)], PHOTO_LINK_SECONDS);
+      .createSignedUrls(toSign, PHOTO_LINK_SECONDS);
     for (const s of signed ?? []) {
       if (s.path && s.signedUrl && !s.error) linkByPath.set(s.path, s.signedUrl);
     }
@@ -106,6 +112,9 @@ export async function GET() {
       signed_up_at: user.created_at ?? null,
       plan: profile.data?.plan ?? null,
       display_name: profile.data?.display_name ?? null,
+      bio: profile.data?.bio ?? null,
+      favourite_team: profile.data?.favourite_team ?? null,
+      avatar_url: avatarPath ? (linkByPath.get(avatarPath) ?? null) : null,
     },
     photo_links_expire_at: linksExpireAt.toISOString(),
     shirts: shirtRows.map((s) => {

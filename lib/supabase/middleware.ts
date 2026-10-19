@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /** Routes that require an authenticated user. */
-const PROTECTED_PREFIXES = ["/collection"];
+const PROTECTED_PREFIXES = ["/collection", "/profile"];
 
 /**
  * Routes that an already-authenticated user should be bounced away from.

@@ -108,3 +108,40 @@ export async function prepareImages(file: File): Promise<PreparedImages> {
     if ("close" in source) source.close();
   }
 }
+
+/** Edge of a profile photo. Shown at 36-96px; 320 stays sharp on 3x screens. */
+const AVATAR_EDGE = 320;
+const AVATAR_QUALITY = 0.82;
+
+/**
+ * A profile photo: the largest centred square, scaled to {@link AVATAR_EDGE}.
+ *
+ * Cropped here rather than with CSS so the stored file is the shape it is
+ * shown in — a phone portrait would otherwise upload ~4x the pixels anyone
+ * sees. Re-encoding strips EXIF, GPS included, as for shirt photos.
+ */
+export async function prepareAvatar(file: File): Promise<File> {
+  const source = await decode(file);
+  try {
+    const { width, height } = sizeOf(source);
+    const side = Math.min(width, height);
+    const sx = Math.round((width - side) / 2);
+    const sy = Math.round((height - side) / 2);
+    const out = Math.min(AVATAR_EDGE, side);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = out;
+    canvas.height = out;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas is unavailable");
+    ctx.drawImage(source, sx, sy, side, side, 0, 0, out, out);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", AVATAR_QUALITY),
+    );
+    if (!blob) throw new Error("Could not encode the image");
+    return new File([blob], "avatar.jpg", { type: "image/jpeg" });
+  } finally {
+    if ("close" in source) source.close();
+  }
+}

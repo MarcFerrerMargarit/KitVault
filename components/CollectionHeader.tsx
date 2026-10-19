@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Download, LifeBuoy, LogOut, Sparkles, Trash2 } from "lucide-react";
+import {
+  Download,
+  LifeBuoy,
+  LogOut,
+  Sparkles,
+  Trash2,
+  User,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Brand } from "@/components/Brand";
 import { AiQuotaBadge } from "@/components/AiQuotaBadge";
@@ -16,19 +23,29 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/components/I18nProvider";
+import { initialsFor } from "@/lib/profile";
 
 interface CollectionHeaderProps {
   /** Email of the signed-in user. */
   email: string;
   /** The user's plan, so they can always see which one they are on. */
   plan: string | null;
+  /** Name from the profile page, if set. */
+  displayName?: string | null;
+  /** Signed URL of the profile photo, if there is one. */
+  avatarUrl?: string | null;
 }
 
 /** Top bar for the collection: brand + account menu with logout. */
-export function CollectionHeader({ email, plan }: CollectionHeaderProps) {
+export function CollectionHeader({
+  email,
+  plan,
+  displayName,
+  avatarUrl,
+}: CollectionHeaderProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const initials = email.slice(0, 2).toUpperCase();
+  const initials = initialsFor(displayName ?? null, email);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [supportOpen, setSupportOpen] = React.useState(false);
 
@@ -58,18 +75,35 @@ export function CollectionHeader({ email, plan }: CollectionHeaderProps) {
           >
             <LifeBuoy className="h-[18px] w-[18px]" />
           </button>
-          <DropdownMenu trigger={<Avatar fallback={initials} />}>
+          <DropdownMenu trigger={<Avatar fallback={initials} src={avatarUrl} />}>
             <DropdownMenuLabel>
               <span className="block text-[11px] uppercase tracking-wide text-muted-2">
                 {t.account.signedInAs}
               </span>
-              <span className="block truncate text-ink">{email}</span>
+              {displayName && (
+                <span className="block truncate font-medium text-ink">
+                  {displayName}
+                </span>
+              )}
+              <span
+                className={
+                  displayName
+                    ? "block truncate text-xs text-muted"
+                    : "block truncate text-ink"
+                }
+              >
+                {email}
+              </span>
               {plan && (
                 <span className="mt-1 block text-[11px] uppercase tracking-wide text-muted">
                   {plan} {t.account.planSuffix}
                 </span>
               )}
             </DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => router.push("/profile")}>
+              <User className="h-4 w-4" />
+              {t.account.profile}
+            </DropdownMenuItem>
             {plan === "free" && (
               <DropdownMenuItem onClick={() => router.push("/upgrade")}>
                 <Sparkles className="h-4 w-4" />

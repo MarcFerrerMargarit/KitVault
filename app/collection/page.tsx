@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { rowToShirt, type ShirtRow } from "@/lib/db";
 import { fetchCollectionLimit, fetchQuota } from "@/lib/quota";
+import { fetchProfile } from "@/lib/profile";
 import { thumbPath } from "@/lib/image";
 import { CollectionHeader } from "@/components/CollectionHeader";
 import { QuotaProvider } from "@/components/QuotaProvider";
@@ -54,9 +55,10 @@ export default async function CollectionPage() {
 
   // AI identifications left today, and how many shirts the plan allows.
   // Both are null if they cannot be read (e.g. a migration has not been run).
-  const [quota, collectionLimit] = await Promise.all([
+  const [quota, collectionLimit, profile] = await Promise.all([
     fetchQuota(supabase),
     fetchCollectionLimit(supabase),
+    fetchProfile(supabase, user.id),
   ]);
 
   return (
@@ -65,6 +67,8 @@ export default async function CollectionPage() {
         <CollectionHeader
           email={user.email ?? "account"}
           plan={collectionLimit?.plan ?? null}
+          displayName={profile.displayName}
+          avatarUrl={profile.avatarUrl}
         />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
           <ShirtGrid initialShirts={shirts} collectionLimit={collectionLimit} />

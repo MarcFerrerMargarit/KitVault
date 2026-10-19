@@ -53,7 +53,7 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
         heading: "Qué datos tratamos",
         blocks: [
           [
-            "Tu cuenta: correo electrónico, fecha de alta y el plan en el que estás. La contraseña la guarda nuestro proveedor de autenticación cifrada; nosotros nunca la vemos.",
+            "Tu cuenta: correo electrónico, fecha de alta y el plan en el que estás, y lo que añadas a tu perfil (nombre, foto, equipo favorito y la descripción sobre ti). La foto se recorta y se reduce en tu navegador antes de subirla, y se guarda en privado como las de tu colección. La contraseña la guarda nuestro proveedor de autenticación cifrada; nosotros nunca la vemos.",
             "Tu colección: los datos de cada camiseta (equipo, temporada, versión, país, liga, marca, notas) y sus fotos. Las fotos se reducen en tu propio navegador antes de subirlas, y al hacerlo se eliminan sus metadatos, incluida la ubicación GPS que muchos móviles guardan en la imagen.",
             "La identificación con IA: lo que la IA propuso para cada foto, los detalles que leyó en ella (escudo, patrocinador, parches o textos visibles), lo que tú guardaste finalmente, y un registro de cada identificación (fecha, modelo usado y tamaño de la petición) que usamos para aplicar los límites diarios y controlar el coste.",
             "Los mensajes que nos envías desde el formulario de ayuda, junto con la página desde la que escribiste y el idioma de la interfaz.",
@@ -156,7 +156,7 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
         heading: "What we process",
         blocks: [
           [
-            "Your account: email address, sign-up date and the plan you are on. Your password is kept, hashed, by our authentication provider; we never see it.",
+            "Your account: email address, sign-up date and the plan you are on, plus whatever you add to your profile (name, photo, favourite team and the description about you). The photo is cropped and downscaled in your browser before upload, and stored privately like your collection's. Your password is kept, hashed, by our authentication provider; we never see it.",
             "Your collection: the details of each shirt (team, season, version, country, league, manufacturer, notes) and its photos. Photos are downscaled in your own browser before upload, which also strips their metadata — including the GPS location many phones write into the image.",
             "AI identification: what the AI suggested for each photo, the details it read from it (crest, sponsor, patches or visible text), what you finally saved, and a record of each identification (time, model used and request size) that we use to apply the daily limits and keep the cost under control.",
             "Messages you send through the help form, with the page you wrote from and the interface language.",
