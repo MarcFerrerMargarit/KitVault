@@ -62,5 +62,6 @@ the audience, a demo for the product, and honest because the misses get shown to
 - [ ] Decide whether the founder appears on camera/voice. Faceless screen + hands + shirts works
       fine.
 - [ ] Photograph 20–30 of your own shirts for the asset library.
-- [ ] Confirm the sharing roadmap. Consider softening "Share your collection" on the landing
-      page until it ships, so the site and social say the same thing.
+- [ ] Confirm the sharing roadmap.
+- [x] Remove "Share your collection" from the landing page so the site and social say the same
+      thing (done 2026-10-19 — replaced by the collection map).

@@ -13,11 +13,11 @@ export const es: Messages = {
   },
 
   hero: {
-    eyebrow: "Colecciona · Organiza · Comparte",
+    eyebrow: "Colecciona · Identifica · Organiza",
     titleLine1: "Tu colección de",
     titleLine2: "camisetas,",
     titleAccent: "por fin ordenada",
-    body: "KitVault es el hogar de tus camisetas. Cataloga cada una con IA, mantén tu archivo impecable y comparte tu colección con coleccionistas de todo el mundo.",
+    body: "KitVault es el hogar de tus camisetas. Cataloga cada una con IA, mantén tu archivo impecable y ve tu colección entera en un mapa del mundo.",
     ctaPrimary: "Empezar gratis",
     ctaSecondary: "Entrar",
     ctaSignedIn: "Ir a mi colección",
@@ -35,9 +35,9 @@ export const es: Messages = {
       title: "Filtros y búsqueda",
       body: "Filtra tu colección por país, liga, temporada o versión al instante. Encuentra cualquier camiseta en segundos.",
     },
-    share: {
-      title: "Comparte tu colección",
-      body: "Enseña tu vitrina. Comparte tu colección con amigos y descubre las camisetas que persiguen otros coleccionistas.",
+    map: {
+      title: "Tu colección en el mapa",
+      body: "Todos los países de donde vienen tus camisetas, en un mapa del mundo interactivo coloreado según cuántas tienes. Haz clic en uno para filtrar.",
     },
   },
 
@@ -339,8 +339,6 @@ export const es: Messages = {
     signedInAs: "Sesión iniciada como",
     planSuffix: "plan",
     upgrade: "Pasar a Pro",
-    profile: "Perfil",
-    settings: "Ajustes",
     logout: "Cerrar sesión",
     deleteAccount: "Borrar cuenta",
     planFreeTooltip: "Estás en el plan gratuito — mira qué añade Pro",

@@ -14,7 +14,7 @@ AI identify it, and build a clean, private archive of every jersey you own.
 
 - **Next.js 16** (App Router) + **React 19**
 - **Supabase** — auth (email + password), Postgres with RLS, private Storage
-- **Google Gemini** (`gemini-2.5-flash`) for shirt identification
+- **Google Gemini** (`gemini-3.8-flash`) for shirt identification
 - **Resend** — SMTP for Supabase's auth email, and the API behind the help form
 - **Tailwind CSS v4** (dark-only design system)
 - **TypeScript** (strict, no `any`)
@@ -91,7 +91,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_URL`      | Supabase → Project Settings → API | yes                  |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API | yes (safe)           |
 | `GEMINI_API_KEY`                | Google AI Studio                  | **no — server only** |
-| `GEMINI_MODEL`                  | Optional; defaults to `gemini-2.5-flash` | **no — server only** |
+| `GEMINI_MODEL`                  | Optional; defaults to `gemini-3.8-flash` | **no — server only** |
 | `RESEND_API_KEY`                | Resend → API Keys                 | **no — server only** |
 | `SUPPORT_EMAIL`                 | Wherever feedback should land     | **no — server only** |
 | `SUPPORT_FROM`                  | Optional; an address at a domain verified in Resend | **no — server only** |
@@ -131,12 +131,15 @@ Running for a group of testers, with nobody paying anything yet:
 | Database (Supabase) | €0            | Free tier; the project pauses after a week idle         |
 | Transactional email | €0            | Resend free tier: 3,000/month, 100/day                  |
 | Analytics           | €0            | Vercel Web Analytics, included on Hobby                 |
-| Gemini              | ~€0.0007/photo | Pay as you go; see [AI quota](#ai-quota)               |
+| Gemini              | ~$0.002-0.003/photo | Pay as you go; see [AI quota](#ai-quota)          |
 | HTTPS certificate   | €0            | Issued and renewed automatically                        |
 
 The Gemini figure is the only one that moves, and it moves slowly: twenty people
-cataloguing twenty-five shirts each comes to about **$0.37 in total**. A €10
-prepaid balance covers roughly 14,000 identifications.
+cataloguing twenty-five shirts each comes to roughly **$1-1.50 in total**, and a
+€10 prepaid balance covers a few thousand identifications. That estimate is for
+`gemini-3.8-flash` at its introductory price, which doubles on 2027-01-01 — see
+[Cost per identification](#cost-per-identification) for how to read the real
+figure off your own ledger.
 
 Going commercial is a different bill — see
 [When you start paying](#when-you-start-paying).
@@ -229,7 +232,7 @@ constraint on this product, conversion is.
 
 1. Drag or pick a photo in the Add Shirt modal.
 2. The file is posted to `/api/identify`, which claims an [AI credit](#ai-quota)
-   and sends the photo to `gemini-2.5-flash` with a JSON response schema,
+   and sends the photo to `gemini-3.8-flash` with a JSON response schema,
    returning team, season, version, manufacturer, country, league and a 0-100
    confidence. If the call fails or the quota is spent, the form opens blank so
    the shirt can still be added by hand.
@@ -612,7 +615,7 @@ refusal, and the modal pushes it into the provider.
 
 ### Choosing the model
 
-`GEMINI_MODEL` picks it; the default is `gemini-2.5-flash`. Changing it needs no
+`GEMINI_MODEL` picks it; the default is `gemini-3.8-flash`. Changing it needs no
 deploy, and `ai_usage.model` records which one actually ran, so the ledger stays
 readable across a switch.
 
@@ -623,12 +626,25 @@ that way. The cost difference between Flash models is not the deciding factor
 either: at these volumes, quadrupling the per-call price changes a month's bill
 by about a euro. Accuracy on obscure kits is what matters.
 
-**The default is on a deprecation path.** Google has announced the retirement of
-the 2.5 family, no earlier than 2026-10-16, with the replacement being a 3.x
-Flash. Check which ids are generally available in the AI Studio model list
-rather than trusting one written here — and when you switch, watch latency:
-`thinkingBudget: 0` is what keeps this fast, and the Gemini 3 models treat
-thinking differently.
+**Gemini 3 is not a drop-in swap for 2.5**, and the request is written for 3:
+
+- **Thinking cannot be switched off.** It is set by `thinkingLevel`, not a token
+  budget; the request asks for `LOW`, the floor, because `minimal` is rejected
+  by 3.8. Thought tokens bill as output and are added to `ai_usage.output_tokens`
+  so the ledger does not understate the cost.
+- **No sampling parameters.** `temperature`, `top_p` and `top_k` are ignored by
+  Gemini 3 and slated to become a 400, so none are sent — repeatable output
+  comes from the response schema.
+
+Google retired the 2.5 family in October 2026, so treat `gemini-2.5-flash` as
+gone even if it still answers for a while.
+Before pointing `GEMINI_MODEL` at anything else, check the id is real with
+`ListModels` — guessing an id from a blog post gives a 404 on every upload:
+
+```bash
+curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY" \
+  | grep -o '"name": "models/[^"]*"' | sed 's/.*models\///;s/"//' | sort
+```
 
 `ai_corrections` already stores what the model predicted against what the user
 saved, which is an accuracy measurement on the real task. It does not yet record
@@ -637,21 +653,22 @@ that is supposed to mean something.
 
 ### Cost per identification
 
-A shirt photo costs roughly 1,000-1,800 input tokens (images are billed as
-768×768 tiles at 258 tokens each) and ~80 output tokens — about **$0.0007**, or
-~1,400 identifications per dollar. Thinking is explicitly disabled
-(`thinkingBudget: 0`): thinking tokens bill as output at $2.50/1M and buy
-nothing when the answer is constrained by a response schema.
+`gemini-3.8-flash` is priced at **$0.75 per 1M input and $3.75 per 1M output**
+until 2026-12-31, then **$1.50 / $7.50**. A photo is on the order of 1,000-2,000
+input tokens; the answer itself is ~80 output tokens, plus whatever the model
+spends thinking at `LOW`. That puts a call somewhere around **$0.002-0.003** at
+the introductory price — but the thinking share is exactly the part that cannot
+be estimated from the outside, so read the real figure off the ledger.
 
-That is an estimate from how Gemini tiles an image. Once there is traffic,
-`ai_usage` holds the real token counts — replace it with your own number:
+`ai_usage` holds the real token counts (thinking included in the output column):
 
 ```sql
 select count(*) as calls,
        round(avg(input_tokens))  as avg_in,
        round(avg(output_tokens)) as avg_out,
-       round((avg(input_tokens)/1e6*0.30
-            + avg(output_tokens)/1e6*2.50)::numeric, 6) as usd_per_call
+       -- gemini-3.8-flash introductory price; use 1.50 / 7.50 from 2027
+       round((avg(input_tokens)/1e6*0.75
+            + avg(output_tokens)/1e6*3.75)::numeric, 6) as usd_per_call
   from public.ai_usage
  where status = 'success';
 ```

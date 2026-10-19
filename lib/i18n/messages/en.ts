@@ -15,11 +15,11 @@ export const en = {
   },
 
   hero: {
-    eyebrow: "Collect · Organize · Share",
+    eyebrow: "Collect · Identify · Organize",
     titleLine1: "Your football shirt",
     titleLine2: "collection,",
     titleAccent: "finally organized",
-    body: "KitVault is the home for your kits. Catalogue every shirt with AI, keep your archive perfectly organised, and share your collection with fellow collectors around the world.",
+    body: "KitVault is the home for your kits. Catalogue every shirt with AI, keep your archive perfectly organised, and see the whole collection on a map of the world.",
     ctaPrimary: "Get started free",
     ctaSecondary: "Log in",
     ctaSignedIn: "Go to my collection",
@@ -37,9 +37,9 @@ export const en = {
       title: "Filter & search",
       body: "Slice your collection by country, league, season or version in real time. Find any shirt in seconds.",
     },
-    share: {
-      title: "Share your collection",
-      body: "Show off your vault. Share your collection with friends and discover the kits other collectors are hunting down.",
+    map: {
+      title: "Your collection on a map",
+      body: "Every country your shirts come from, on an interactive world map shaded by how many you own. Click one to filter.",
     },
   },
 
@@ -327,8 +327,6 @@ export const en = {
     signedInAs: "Signed in as",
     planSuffix: "plan",
     upgrade: "Upgrade to Pro",
-    profile: "Profile",
-    settings: "Settings",
     logout: "Log out",
     deleteAccount: "Delete account",
     planFreeTooltip: "You are on the free plan — see what Pro adds",

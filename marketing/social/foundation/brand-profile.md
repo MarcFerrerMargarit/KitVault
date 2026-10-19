@@ -125,9 +125,10 @@ and `platforms/`.
   - If a `design-and-templates` brand kit is created later, it becomes the source of truth.
 
 ## Guardrails
-- **Sharing is not built yet.** The landing page says "Share your collection", but there are no
-  public collection pages or share links in the product today. Don't promise sharing on social
-  until it ships. Talk about showing your collection via screenshots of your vault and map.
+- **Sharing is not built yet.** There are no public collection pages or share links in the
+  product. The landing page no longer promises it either (since 2026-10-19 its third feature is
+  the collection map). Don't promise sharing on social until it ships. Talk about showing your
+  collection via screenshots of your vault and map.
 - **Club IP:** Photographing real shirts the founder or collectors own is fine. Never use club
   crests or logos as KitVault branding, imply a club partnership, or generate a club kit with
   AI.

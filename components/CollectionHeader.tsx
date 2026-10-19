@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LifeBuoy, LogOut, Settings, Sparkles, Trash2, User } from "lucide-react";
+import { LifeBuoy, LogOut, Sparkles, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Brand } from "@/components/Brand";
 import { AiQuotaBadge } from "@/components/AiQuotaBadge";
@@ -76,14 +76,6 @@ export function CollectionHeader({ email, plan }: CollectionHeaderProps) {
                 {t.account.upgrade}
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem>
-              <User className="h-4 w-4" />
-              {t.account.profile}
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="h-4 w-4" />
-              {t.account.settings}
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
               {t.account.logout}

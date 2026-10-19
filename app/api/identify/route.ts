@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
 import {
   fetchQuota,
@@ -24,16 +24,14 @@ export const maxDuration = 60;
  * hosting dashboard, without a deploy. `ai_usage.model` records which one
  * actually ran, so the ledger stays honest across a switch.
  *
- * The default is on its way out: Google has announced the retirement of the
- * 2.5 family, no earlier than 2026-10-16. The replacement is a 3.x Flash;
- * check which are generally available in the AI Studio model list rather than
- * trusting an id written here months ago.
- *
- * One thing to watch when moving: `thinkingBudget: 0` below is what keeps this
- * fast and cheap, and the Gemini 3 models treat thinking differently. If a
- * switch makes identification slow or pricier, look there first.
+ * The request below is written for the Gemini 3 family, which differs from
+ * 2.5 in two ways that matter here. Thinking is set by level, not by token
+ * budget, and cannot be switched off — LOW is the floor, since `minimal` is
+ * rejected by 3.8. And sampling parameters (`temperature`, `top_p`, `top_k`) are
+ * ignored today and slated to become a 400, so none are sent: repeatable output
+ * comes from the response schema, not from a low temperature.
  */
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
 /** Row returned by the `consume_ai_credit()` Postgres function. */
@@ -142,10 +140,9 @@ fixed list. If unsure, still provide your best estimate.`;
         },
       ],
       config: {
-        temperature: 0.2,
-        // Thinking tokens bill as output ($2.50/1M) and buy nothing here: the
-        // answer is constrained by the schema below. Off = cheaper + faster.
-        thinkingConfig: { thinkingBudget: 0 },
+        // Thinking bills as output and buys little here — the schema below
+        // already decides the shape of the answer — so keep it at the floor.
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -180,6 +177,13 @@ fixed list. If unsure, still provide your best estimate.`;
 
     const parsed = JSON.parse(text) as Record<string, unknown>;
     const usage = result.usageMetadata;
+    // Thought tokens are reported apart from the answer but billed as output.
+    // Gemini 3 cannot turn thinking off, so leaving them out of the ledger
+    // would understate every call's cost.
+    const outputTokens =
+      usage?.candidatesTokenCount == null && usage?.thoughtsTokenCount == null
+        ? null
+        : (usage?.candidatesTokenCount ?? 0) + (usage?.thoughtsTokenCount ?? 0);
 
     // Settle the reservation with the real token counts — `ai_usage` doubles
     // as the cost ledger, so this is what we bill and budget against.
@@ -187,13 +191,13 @@ fixed list. If unsure, still provide your best estimate.`;
       await supabase.rpc("record_ai_usage", {
         p_usage_id: usageId,
         p_input: usage?.promptTokenCount ?? null,
-        p_output: usage?.candidatesTokenCount ?? null,
+        p_output: outputTokens,
         p_total: usage?.totalTokenCount ?? null,
       });
     }
 
     console.log(
-      `[identify] model=${MODEL} tokens in=${usage?.promptTokenCount ?? "?"} out=${usage?.candidatesTokenCount ?? "?"} total=${usage?.totalTokenCount ?? "?"}`,
+      `[identify] model=${MODEL} tokens in=${usage?.promptTokenCount ?? "?"} out=${outputTokens ?? "?"} (thinking ${usage?.thoughtsTokenCount ?? 0}) total=${usage?.totalTokenCount ?? "?"}`,
     );
 
     return NextResponse.json({
@@ -212,7 +216,7 @@ fixed list. If unsure, still provide your best estimate.`;
       ),
       usage: {
         input: usage?.promptTokenCount ?? null,
-        output: usage?.candidatesTokenCount ?? null,
+        output: outputTokens,
         total: usage?.totalTokenCount ?? null,
       },
     });

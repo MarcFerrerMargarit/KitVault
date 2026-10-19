@@ -67,7 +67,7 @@ We never name competitor apps in public content. The public contrast is always "
   "official" or any club affiliation, "download the app".
 
 ## Open questions for the founder
-- Is public sharing on the roadmap, and roughly when? It's the strongest social loop and the
-  landing page already promises it.
+- Is public sharing on the roadmap, and roughly when? It's the strongest social loop. (The
+  landing page stopped promising it on 2026-10-19.)
 - Any real accuracy data from `ai_corrections` we could publish honestly?
 - Social handles and whether they're already reserved.

@@ -3,7 +3,7 @@ import {
   ArrowRight,
   ScanSearch,
   SlidersHorizontal,
-  Share2,
+  Globe2,
 } from "lucide-react";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ function GithubIcon({ className }: { className?: string }) {
   );
 }
 
-const FEATURE_ICONS = [ScanSearch, SlidersHorizontal, Share2] as const;
+const FEATURE_ICONS = [ScanSearch, SlidersHorizontal, Globe2] as const;
 
 /**
  * Rendered per request so it can greet a signed-in visitor properly. Sending
@@ -48,7 +48,7 @@ export default async function LandingPage() {
     supabase.auth.getUser(),
   ]);
   const signedIn = Boolean(auth.user);
-  const features = [t.features.identify, t.features.filter, t.features.share];
+  const features = [t.features.identify, t.features.filter, t.features.map];
 
   return (
     <div className="flex min-h-screen flex-col">
