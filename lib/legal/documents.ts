@@ -13,7 +13,8 @@ import type { Locale } from "@/lib/i18n/config";
  * `LEGAL.updated` with it.
  *
  * A paragraph is a string; a bulleted list is an array of strings. `{name}`
- * placeholders are filled from `LEGAL` in `./config`.
+ * placeholders are filled from `LEGAL` in `./config`; a list item whose
+ * placeholder is empty there is left out.
  *
  * This is a careful draft, not legal advice. Have it read by someone qualified
  * before charging anyone.
@@ -79,7 +80,7 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
         blocks: [
           "Usamos proveedores que tratan datos por cuenta nuestra (encargados del tratamiento), con contrato y solo para prestar el servicio:",
           [
-            "Supabase — autenticación, base de datos y almacenamiento de fotos. Región del proyecto: {supabaseRegion}.",
+            "Supabase — autenticación, base de datos y almacenamiento de fotos. Tus datos y tus fotos se guardan en la Unión Europea, en {supabaseRegion}.",
             "Google (API de Gemini) — recibe la foto cuando pides una identificación y devuelve su propuesta. Usamos el nivel de pago de la API, en el que Google no utiliza las peticiones ni las respuestas para mejorar sus productos.",
             "Vercel — aloja la web y cuenta las visitas de forma agregada.",
             "Resend — envía los correos de la cuenta y los mensajes del formulario de ayuda, desde servidores en la Unión Europea (Irlanda).",
@@ -182,7 +183,7 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
         blocks: [
           "We use providers that process data on our behalf (processors), under contract and only to run the service:",
           [
-            "Supabase — authentication, database and photo storage. Project region: {supabaseRegion}.",
+            "Supabase — authentication, database and photo storage. Your data and photos are stored in the European Union, in {supabaseRegion}.",
             "Google (Gemini API) — receives the photo when you ask for an identification and returns its suggestion. We use the paid tier of the API, under which Google does not use requests or responses to improve its products.",
             "Vercel — hosts the website and counts visits in aggregate.",
             "Resend — sends account emails and help-form messages, from servers in the European Union (Ireland).",

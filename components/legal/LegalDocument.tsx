@@ -16,6 +16,16 @@ interface LegalDocumentProps {
   other: { href: string; label: string };
 }
 
+/**
+ * True when the text uses a placeholder whose value is empty — such a line
+ * ("NIF: ") says nothing, so it is dropped rather than rendered blank.
+ */
+function usesEmptyValue(text: string): boolean {
+  return [...text.matchAll(/\{(\w+)\}/g)].some(
+    ([, key]) => key in LEGAL_VARS && LEGAL_VARS[key].trim() === "",
+  );
+}
+
 /** A long-form legal page: plain, readable, and the same in both languages. */
 export function LegalDocument({ doc, locale, t, other }: LegalDocumentProps) {
   const updated = new Intl.DateTimeFormat(locale, {
@@ -60,9 +70,11 @@ export function LegalDocument({ doc, locale, t, other }: LegalDocumentProps) {
                 {section.blocks.map((block, i) =>
                   Array.isArray(block) ? (
                     <ul key={i} className="list-disc space-y-2 pl-5 marker:text-accent">
-                      {block.map((item) => (
-                        <li key={item}>{fill(item, LEGAL_VARS)}</li>
-                      ))}
+                      {block
+                        .filter((item) => !usesEmptyValue(item))
+                        .map((item) => (
+                          <li key={item}>{fill(item, LEGAL_VARS)}</li>
+                        ))}
                     </ul>
                   ) : (
                     <p key={i}>{fill(block, LEGAL_VARS)}</p>

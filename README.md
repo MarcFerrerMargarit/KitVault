@@ -559,12 +559,14 @@ message dictionaries because they are long and change on a legal rather than a
 product rhythm. The signup form links both and asks the user to confirm they
 are 14 or older, the Spanish age of digital consent.
 
-**The facts the documents rest on live in `lib/legal/config.ts`, and some are
-placeholders**: who runs the service, tax ID, postal address, contact email and
-the Supabase region. They render in brackets until filled in, on purpose — a
-visible gap is fixable, an invented tax number is not. Fill them in before
-opening the app to strangers; Spanish law (LSSI art. 10) requires a service's
-operator to be identifiable, and the GDPR requires the controller to be named.
+**The facts the documents rest on live in `lib/legal/config.ts`**: who runs the
+service, tax ID, postal address, contact email and the Supabase region. A value
+left empty drops its line from the pages instead of rendering it blank. Tax ID
+and address are empty today — enough while the service is free, since the GDPR
+asks for the controller's identity and contact details, but Spanish law (LSSI
+art. 10) expects both from a service with economic activity, so add them before
+charging anyone. The documents say the data is stored in the EU because the
+Supabase project is in Frankfurt; if that ever changes, so must they.
 
 Every claim in them is about how the app actually behaves — what is stored, who
 processes it, how deletion works. Change the documents, and `LEGAL.updated`,
@@ -902,8 +904,8 @@ Tokens live in `app/globals.css` under `@theme` (e.g. `bg-bg`, `text-accent`,
   project after a week idle — both need their paid plans. See
   [Deployment](#deployment).
 - **Legal identity and review.** The privacy policy, terms and data export
-  exist (see [Legal pages](#legal-pages)), but the operator's details in
-  `lib/legal/config.ts` are placeholders, and the terms deliberately leave out
+  exist (see [Legal pages](#legal-pages)), but the tax ID and postal address in
+  `lib/legal/config.ts` are still empty, and the terms deliberately leave out
   payment, renewal and cancellation. Fill in the first, write the second when
   payments open, add the payment provider to the processor list, and have both
   documents reviewed.
