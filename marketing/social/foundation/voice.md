@@ -83,8 +83,8 @@ the founder's writing and is consistently in one voice. Every rule below cites t
    country."
 3. ❌ "Sign up today and never lose track again!!"
    ✅ "Your first shirt takes under a minute. Try it for free — link in bio."
-4. ❌ "Share your amazing collection with the world!" (not built yet)
-   ✅ "Screenshot your map. How many countries is your collection in?"
+4. ❌ "Share your amazing collection with the world!" (vaults are shared by link, not broadcast)
+   ✅ "Your vault has a link now. Send it to the mate who says he has more shirts than you."
 5. ❌ "Our AI is 100% accurate."
    ✅ "It gets most shirts right and tells you how sure it is. You get the final say."
 

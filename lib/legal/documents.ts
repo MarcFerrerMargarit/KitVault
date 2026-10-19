@@ -53,7 +53,7 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
         heading: "Qué datos tratamos",
         blocks: [
           [
-            "Tu cuenta: correo electrónico, fecha de alta y el plan en el que estás, y lo que añadas a tu perfil (nombre, foto, equipo favorito y la descripción sobre ti). La foto se recorta y se reduce en tu navegador antes de subirla, y se guarda en privado como las de tu colección. La contraseña la guarda nuestro proveedor de autenticación cifrada; nosotros nunca la vemos.",
+            "Tu cuenta: correo electrónico, fecha de alta y el plan en el que estás, y lo que añadas a tu perfil (nombre, foto, equipo favorito, la descripción sobre ti y, si la eliges, tu dirección pública). La foto se recorta y se reduce en tu navegador antes de subirla, y se guarda en privado como las de tu colección. La contraseña la guarda nuestro proveedor de autenticación cifrada; nosotros nunca la vemos.",
             "Tu colección: los datos de cada camiseta (equipo, temporada, versión, país, liga, marca, notas) y sus fotos. Las fotos se reducen en tu propio navegador antes de subirlas, y al hacerlo se eliminan sus metadatos, incluida la ubicación GPS que muchos móviles guardan en la imagen.",
             "La identificación con IA: lo que la IA propuso para cada foto, los detalles que leyó en ella (escudo, patrocinador, parches o textos visibles), lo que tú guardaste finalmente, y un registro de cada identificación (fecha, modelo usado y tamaño de la petición) que usamos para aplicar los límites diarios y controlar el coste.",
             "Los mensajes que nos envías desde el formulario de ayuda, junto con la página desde la que escribiste y el idioma de la interfaz.",
@@ -90,6 +90,18 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
         ],
       },
       {
+        heading: "Tu vitrina pública",
+        blocks: [
+          "Tu colección es privada salvo que tú decidas lo contrario. Si eliges una dirección y activas «Vitrina pública» en tu perfil, cualquiera que tenga el enlace kitvault.dev/u/<tu dirección> podrá ver:",
+          [
+            "Tu nombre, tu foto, tu equipo favorito y la descripción sobre ti.",
+            "Tus camisetas con sus fotos y sus datos (equipo, temporada, versión, país, liga y marca), y el total de camisetas, países y ligas.",
+          ],
+          "Nunca se muestran tu correo, las notas de tus camisetas ni los datos de la identificación con IA.",
+          "La vitrina no se ofrece a los buscadores, pero quien tenga el enlace puede reenviarlo, y lo que alguien ve puede guardarlo. La base es tu consentimiento (art. 6.1.a RGPD), y puedes retirarlo cuando quieras desactivando la opción: la vitrina deja de verse al momento, aunque los enlaces a fotos que alguien ya haya cargado pueden seguir funcionando hasta una hora.",
+        ],
+      },
+      {
         heading: "Cuánto tiempo los guardamos",
         blocks: [
           "Mientras tengas la cuenta. Cuando la borras desde el menú de tu cuenta, eliminamos primero tus fotos y después la cuenta junto con todo lo que cuelga de ella: colección, correcciones, registro de identificaciones, mensajes de ayuda y lista de espera. Es inmediato y no se puede deshacer.",
@@ -118,7 +130,7 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
       {
         heading: "Seguridad",
         blocks: [
-          "Cada usuario solo puede leer y modificar sus propios datos, y esa separación la impone la propia base de datos, no solo la aplicación. Las fotos están en un almacenamiento privado y se sirven con enlaces que caducan. Toda la comunicación va cifrada (HTTPS).",
+          "Cada usuario solo puede leer y modificar sus propios datos — salvo lo que tú mismo hagas público en tu vitrina —, y esa separación la impone la propia base de datos, no solo la aplicación. Las fotos están en un almacenamiento privado y se sirven con enlaces que caducan. Toda la comunicación va cifrada (HTTPS).",
         ],
       },
       {
@@ -156,7 +168,7 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
         heading: "What we process",
         blocks: [
           [
-            "Your account: email address, sign-up date and the plan you are on, plus whatever you add to your profile (name, photo, favourite team and the description about you). The photo is cropped and downscaled in your browser before upload, and stored privately like your collection's. Your password is kept, hashed, by our authentication provider; we never see it.",
+            "Your account: email address, sign-up date and the plan you are on, plus whatever you add to your profile (name, photo, favourite team, the description about you and, if you choose one, your public address). The photo is cropped and downscaled in your browser before upload, and stored privately like your collection's. Your password is kept, hashed, by our authentication provider; we never see it.",
             "Your collection: the details of each shirt (team, season, version, country, league, manufacturer, notes) and its photos. Photos are downscaled in your own browser before upload, which also strips their metadata — including the GPS location many phones write into the image.",
             "AI identification: what the AI suggested for each photo, the details it read from it (crest, sponsor, patches or visible text), what you finally saved, and a record of each identification (time, model used and request size) that we use to apply the daily limits and keep the cost under control.",
             "Messages you send through the help form, with the page you wrote from and the interface language.",
@@ -193,6 +205,18 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
         ],
       },
       {
+        heading: "Your public vault",
+        blocks: [
+          "Your collection is private unless you decide otherwise. If you choose an address and switch on “Public vault” in your profile, anyone with the link kitvault.dev/u/<your address> can see:",
+          [
+            "Your name, photo, favourite team and the description about you.",
+            "Your shirts with their photos and details (team, season, version, country, league and manufacturer), and the totals of shirts, countries and leagues.",
+          ],
+          "Your email, your shirts' notes and the AI identification data are never shown.",
+          "The vault is not offered to search engines, but anyone with the link can pass it on, and what someone sees they can save. The basis is your consent (GDPR art. 6.1.a), which you can withdraw at any time by switching the option off: the vault stops being visible at once, though links to photos someone has already loaded may keep working for up to an hour.",
+        ],
+      },
+      {
         heading: "How long we keep it",
         blocks: [
           "For as long as you have an account. When you delete it from your account menu, we delete your photos first and then the account with everything attached to it: collection, corrections, identification record, help messages and waiting-list entry. It is immediate and cannot be undone.",
@@ -221,7 +245,7 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
       {
         heading: "Security",
         blocks: [
-          "Each user can only read and change their own data, and that separation is enforced by the database itself, not just the application. Photos are kept in private storage and served through links that expire. All traffic is encrypted (HTTPS).",
+          "Each user can only read and change their own data — apart from what you choose to make public in your vault — and that separation is enforced by the database itself, not just the application. Photos are kept in private storage and served through links that expire. All traffic is encrypted (HTTPS).",
         ],
       },
       {
@@ -278,8 +302,8 @@ export const TERMS: Record<Locale, LegalDoc> = {
       {
         heading: "Tu contenido",
         blocks: [
-          "Las fotos y los datos que subes siguen siendo tuyos. Nos das el permiso necesario para guardarlos, procesarlos y mostrártelos, y para enviar las fotos al proveedor de IA cuando pides una identificación — nada más. Ese permiso termina cuando borras el contenido o la cuenta.",
-          "Al subir una foto confirmas que tienes derecho a hacerlo. No subas contenido ilegal, ofensivo, que vulnere derechos de terceros o que no tenga que ver con el servicio. Podemos retirar contenido que incumpla estas condiciones.",
+          "Las fotos y los datos que subes siguen siendo tuyos. Nos das el permiso necesario para guardarlos, procesarlos y mostrártelos, y para enviar las fotos al proveedor de IA cuando pides una identificación — nada más. Si activas tu vitrina pública, nos das además permiso para mostrar a quien tenga el enlace lo que explica la política de privacidad. Ese permiso termina cuando borras el contenido o la cuenta, o desactivas la vitrina.",
+          "Al subir una foto confirmas que tienes derecho a hacerlo. No subas contenido ilegal, ofensivo, que vulnere derechos de terceros o que no tenga que ver con el servicio, ni elijas una dirección que suplante a otra persona, club o marca. Podemos retirar contenido que incumpla estas condiciones.",
         ],
       },
       {
@@ -365,8 +389,8 @@ export const TERMS: Record<Locale, LegalDoc> = {
       {
         heading: "Your content",
         blocks: [
-          "The photos and details you upload stay yours. You give us the permission needed to store them, process them and show them to you, and to send photos to the AI provider when you ask for an identification — nothing more. That permission ends when you delete the content or your account.",
-          "By uploading a photo you confirm you have the right to. Do not upload content that is illegal, offensive, infringes someone else's rights or has nothing to do with the service. We may remove content that breaks these terms.",
+          "The photos and details you upload stay yours. You give us the permission needed to store them, process them and show them to you, and to send photos to the AI provider when you ask for an identification — nothing more. If you switch on your public vault, you also give us permission to show anyone with the link what the privacy policy describes. That permission ends when you delete the content or your account, or switch the vault off.",
+          "By uploading a photo you confirm you have the right to. Do not upload content that is illegal, offensive, infringes someone else's rights or has nothing to do with the service, or choose an address that impersonates another person, club or brand. We may remove content that breaks these terms.",
         ],
       },
       {

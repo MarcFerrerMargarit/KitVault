@@ -39,7 +39,7 @@ export const en = {
     },
     map: {
       title: "Your collection on a map",
-      body: "Every country your shirts come from, on an interactive world map shaded by how many you own. Click one to filter.",
+      body: "Every country your shirts come from, on an interactive world map shaded by how many you own. Share the whole vault with a link.",
     },
   },
 
@@ -347,6 +347,7 @@ export const en = {
     upgrade: "Upgrade to Pro",
     logout: "Log out",
     profile: "Profile",
+    viewPublicVault: "My public vault",
     exportData: "Download my data",
     deleteAccount: "Delete account",
     planFreeTooltip: "You are on the free plan — see what Pro adds",
@@ -431,9 +432,48 @@ export const en = {
     close: "Close",
   },
 
+  sharing: {
+    title: "Share your vault",
+    description:
+      "Let anyone with the link see your collection. Your email and your shirts' notes are never shown.",
+    usernameLabel: "Your address",
+    usernameHint: "3–24 characters: lowercase letters, numbers, - and _.",
+    toggleLabel: "Public vault",
+    toggleOn: "Anyone with the link can see it",
+    toggleOff: "Only you can see it",
+    notIndexed:
+      "It won't show up in search engines — people reach it through your link.",
+    save: "Save",
+    saving: "Saving…",
+    saved: "Saved",
+    copy: "Copy link",
+    copied: "Copied",
+    view: "View",
+    errors: {
+      format:
+        "Use 3–24 lowercase letters, numbers, - or _, starting and ending with a letter or number.",
+      reserved: "That address is reserved. Try another.",
+      taken: "Someone already has that address. Try another.",
+      needsUsername: "Choose an address before making your vault public.",
+    },
+  },
+
+  publicVault: {
+    cta: "Create your own vault — free",
+    ctaShort: "Create yours",
+    favouriteTeam: "Favourite team",
+    empty: "No shirts here yet.",
+    pitch:
+      "KitVault catalogues football shirt collections: one photo and the AI recognises the team, season and maker.",
+    metaTitle: "{name}'s football shirt collection",
+    metaDescription: "{count} shirts from {countries} countries, on KitVault.",
+    filteredBy: "Showing {country}",
+  },
+
   profile: {
     title: "Your profile",
     privateNote: "Your profile is private — only you can see it.",
+    publicNote: "Your vault is public at",
     photo: "Profile photo",
     addPhoto: "Add photo",
     changePhoto: "Change photo",

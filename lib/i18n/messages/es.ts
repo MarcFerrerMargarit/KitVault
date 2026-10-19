@@ -37,7 +37,7 @@ export const es: Messages = {
     },
     map: {
       title: "Tu colección en el mapa",
-      body: "Todos los países de donde vienen tus camisetas, en un mapa del mundo interactivo coloreado según cuántas tienes. Haz clic en uno para filtrar.",
+      body: "Todos los países de donde vienen tus camisetas, en un mapa del mundo interactivo coloreado según cuántas tienes. Y comparte tu vitrina con un enlace.",
     },
   },
 
@@ -358,6 +358,7 @@ export const es: Messages = {
     upgrade: "Pasar a Pro",
     logout: "Cerrar sesión",
     profile: "Perfil",
+    viewPublicVault: "Mi vitrina pública",
     exportData: "Descargar mis datos",
     deleteAccount: "Borrar cuenta",
     planFreeTooltip: "Estás en el plan gratuito — mira qué añade Pro",
@@ -443,9 +444,48 @@ export const es: Messages = {
     close: "Cerrar",
   },
 
+  sharing: {
+    title: "Comparte tu vitrina",
+    description:
+      "Deja que cualquiera con el enlace vea tu colección. Tu correo y las notas de tus camisetas nunca se muestran.",
+    usernameLabel: "Tu dirección",
+    usernameHint: "De 3 a 24 caracteres: minúsculas, números, - y _.",
+    toggleLabel: "Vitrina pública",
+    toggleOn: "Cualquiera con el enlace puede verla",
+    toggleOff: "Solo la ves tú",
+    notIndexed:
+      "No aparecerá en buscadores: se llega a ella con tu enlace.",
+    save: "Guardar",
+    saving: "Guardando…",
+    saved: "Guardado",
+    copy: "Copiar enlace",
+    copied: "Copiado",
+    view: "Ver",
+    errors: {
+      format:
+        "Usa de 3 a 24 minúsculas, números, - o _, empezando y acabando por letra o número.",
+      reserved: "Esa dirección está reservada. Prueba otra.",
+      taken: "Esa dirección ya la tiene alguien. Prueba otra.",
+      needsUsername: "Elige una dirección antes de hacer pública tu vitrina.",
+    },
+  },
+
+  publicVault: {
+    cta: "Crea tu propia vitrina gratis",
+    ctaShort: "Crea la tuya",
+    favouriteTeam: "Equipo favorito",
+    empty: "Aún no hay camisetas.",
+    pitch:
+      "KitVault cataloga colecciones de camisetas de fútbol: con una foto, la IA reconoce el equipo, la temporada y la marca.",
+    metaTitle: "La colección de camisetas de {name}",
+    metaDescription: "{count} camisetas de {countries} países, en KitVault.",
+    filteredBy: "Mostrando {country}",
+  },
+
   profile: {
     title: "Tu perfil",
     privateNote: "Tu perfil es privado: solo lo ves tú.",
+    publicNote: "Tu vitrina es pública en",
     photo: "Foto de perfil",
     addPhoto: "Añadir foto",
     changePhoto: "Cambiar foto",

@@ -26,8 +26,12 @@ interface ShirtDetailModalProps {
   shirt: Shirt | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEdit: (shirt: Shirt) => void;
-  onDelete: (shirt: Shirt) => void;
+  /**
+   * Leave both out for a read-only view — a public vault, seen by someone who
+   * is not the owner. Editing, deleting and the AI details are then hidden.
+   */
+  onEdit?: (shirt: Shirt) => void;
+  onDelete?: (shirt: Shirt) => void;
 }
 
 function MetaRow({
@@ -62,6 +66,7 @@ export function ShirtDetailModal({
   if (!shirt) return null;
 
   const tone = confidenceTone(shirt.ai.confidence);
+  const readOnly = !onEdit && !onDelete;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} className="max-w-3xl">
@@ -145,37 +150,45 @@ export function ShirtDetailModal({
           )}
 
           {/* AI Identification */}
-          <div className="mt-4 rounded-[var(--radius)] border border-accent/25 bg-accent-soft p-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-accent" />
-              <span className="text-xs font-semibold uppercase tracking-wide text-accent">
-                {t.detail.aiTitle}
-              </span>
+          {!readOnly && (
+            <div className="mt-4 rounded-[var(--radius)] border border-accent/25 bg-accent-soft p-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-accent" />
+                <span className="text-xs font-semibold uppercase tracking-wide text-accent">
+                  {t.detail.aiTitle}
+                </span>
+              </div>
+              <p className="mt-1.5 text-sm text-ink">
+                {t.detail.identifiedAs}{" "}
+                <span className="font-semibold">{shirt.ai.label}</span>{" "}
+                <span className={cn("font-semibold", tone.className)}>
+                  {fill(t.detail.confidence, { value: shirt.ai.confidence })}
+                </span>
+              </p>
             </div>
-            <p className="mt-1.5 text-sm text-ink">
-              {t.detail.identifiedAs}{" "}
-              <span className="font-semibold">{shirt.ai.label}</span>{" "}
-              <span className={cn("font-semibold", tone.className)}>
-                {fill(t.detail.confidence, { value: shirt.ai.confidence })}
-              </span>
-            </p>
-          </div>
+          )}
 
           {/* Actions */}
-          <div className="mt-5 flex gap-2">
-            <Button
-              variant="secondary"
-              className="flex-1"
-              onClick={() => onEdit(shirt)}
-            >
-              <Pencil className="h-4 w-4" />
-              {t.detail.edit}
-            </Button>
-            <Button variant="danger" onClick={() => onDelete(shirt)}>
-              <Trash2 className="h-4 w-4" />
-              {t.detail.delete}
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="mt-5 flex gap-2">
+              {onEdit && (
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => onEdit(shirt)}
+                >
+                  <Pencil className="h-4 w-4" />
+                  {t.detail.edit}
+                </Button>
+              )}
+              {onDelete && (
+                <Button variant="danger" onClick={() => onDelete(shirt)}>
+                  <Trash2 className="h-4 w-4" />
+                  {t.detail.delete}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </Dialog>

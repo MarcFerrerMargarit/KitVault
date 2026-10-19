@@ -69,6 +69,7 @@ export default async function CollectionPage() {
           plan={collectionLimit?.plan ?? null}
           displayName={profile.displayName}
           avatarUrl={profile.avatarUrl}
+          publicUsername={profile.isPublic ? profile.username : null}
         />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
           <ShirtGrid initialShirts={shirts} collectionLimit={collectionLimit} />

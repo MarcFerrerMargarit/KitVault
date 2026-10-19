@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { AVATAR_PREFIX, PROFILE_LIMITS } from "@/lib/profile";
+import {
+  AVATAR_PREFIX,
+  PROFILE_LIMITS,
+  normaliseUsername,
+  usernameProblem,
+} from "@/lib/profile";
 import { fill } from "@/lib/i18n/format";
 import { getTranslations } from "@/lib/i18n/server";
 
@@ -89,4 +94,56 @@ export async function setAvatar(path: string | null): Promise<ProfileResult> {
   revalidatePath("/profile");
   revalidatePath("/collection");
   return {};
+}
+
+export interface SharingResult {
+  error?: string;
+  /** The username as stored, so the form can show exactly what was saved. */
+  username?: string | null;
+}
+
+/**
+ * Choose the public address and switch the vault on or off.
+ *
+ * Validated here so the user gets a reason, and again by the database's CHECK
+ * and UNIQUE constraints, which are the ones that actually hold.
+ */
+export async function updateSharing(input: {
+  username: string;
+  isPublic: boolean;
+}): Promise<SharingResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { t } = await getTranslations();
+  if (!user) return { error: t.errors.notSignedIn };
+
+  const username = normaliseUsername(input.username) || null;
+
+  if (username) {
+    const problem = usernameProblem(username);
+    if (problem === "format") return { error: t.sharing.errors.format };
+    if (problem === "reserved") return { error: t.sharing.errors.reserved };
+  } else if (input.isPublic) {
+    return { error: t.sharing.errors.needsUsername };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ username, is_public: Boolean(username) && input.isPublic })
+    .eq("id", user.id);
+
+  if (error) {
+    // 23505: unique_violation. Saying so is unavoidable — a unique name has to
+    // tell you when it is taken — and it reveals nothing else about the owner.
+    if (error.code === "23505") return { error: t.sharing.errors.taken };
+    if (error.code === "23514") return { error: t.sharing.errors.format };
+    return { error: fill(t.errors.profileSave, { error: error.message }) };
+  }
+
+  revalidatePath("/profile");
+  revalidatePath("/collection");
+  if (username) revalidatePath(`/u/${username}`);
+  return { username };
 }

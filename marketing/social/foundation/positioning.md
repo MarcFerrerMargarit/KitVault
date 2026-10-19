@@ -33,7 +33,8 @@ We never name competitor apps in public content. The public contrast is always "
 | AI identification from a photo, with a confidence % and your review | An authenticator or fake-spotter |
 | Filters: country, league, season, version, team search | A valuation or price guide |
 | Collection stats + an interactive world map | A marketplace |
-| Private by default, full account deletion | A public profile or social network. **Sharing isn't built yet** |
+| Private by default, full account deletion | A social network: no follows, feed, directory or search |
+| Opt-in public vault, shared by link (`kitvault.dev/u/<username>`) | Indexed or discoverable profiles |
 | Web app that works in a phone browser, EN + ES | A native iOS/Android app |
 | Open source | A developer tool |
 
@@ -63,11 +64,12 @@ We never name competitor apps in public content. The public contrast is always "
   "private", "delete everything anytime", "open source".
 - ⚠️ Say only with care: "under a minute" (single add, AI available). "Works on your phone"
   (browser, not an app).
-- ❌ Never: accuracy %, user counts, "unlimited" on Free, sharing, valuation, authentication,
+- ⚠️ Sharing: only as "share your vault with a link". It is opt-in and not discoverable.
+- ❌ Never: accuracy %, user counts, "unlimited" on Free, valuation, authentication,
   "official" or any club affiliation, "download the app".
 
 ## Open questions for the founder
-- Is public sharing on the roadmap, and roughly when? It's the strongest social loop. (The
-  landing page stopped promising it on 2026-10-19.)
+- Sharing shipped (2026-10-19) as opt-in, link-only vaults. Should vaults ever be indexable or
+  discoverable? It would strengthen the loop and changes the privacy story — a founder call.
 - Any real accuracy data from `ai_corrections` we could publish honestly?
 - Social handles and whether they're already reserved.

@@ -21,6 +21,11 @@ const oswald = Oswald({
 });
 
 export const metadata: Metadata = {
+  // Link previews need absolute URLs for their images; without this they are
+  // resolved against whatever host served the request.
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://kitvault.dev",
+  ),
   title: "KitVault — Your football shirt collection, organized",
   description:
     "Collect, identify and organize your football shirts. AI-powered identification, smart filters, and your own private collection.",

@@ -36,7 +36,7 @@ export async function GET() {
     await Promise.all([
       supabase
         .from("profiles")
-        .select("email, display_name, bio, favourite_team, avatar_path, plan, created_at")
+        .select("*")
         .eq("id", user.id)
         .maybeSingle(),
       supabase
@@ -114,6 +114,13 @@ export async function GET() {
       display_name: profile.data?.display_name ?? null,
       bio: profile.data?.bio ?? null,
       favourite_team: profile.data?.favourite_team ?? null,
+      public_vault: profile.data?.username
+        ? {
+            username: profile.data.username,
+            is_public: profile.data.is_public === true,
+            url: `https://kitvault.dev/u/${profile.data.username}`,
+          }
+        : null,
       avatar_url: avatarPath ? (linkByPath.get(avatarPath) ?? null) : null,
     },
     photo_links_expire_at: linksExpireAt.toISOString(),

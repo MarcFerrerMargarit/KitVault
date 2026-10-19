@@ -51,8 +51,9 @@ the audience, a demo for the product, and honest because the misses get shown to
    ID this?" series + map/collection posts. X light. Measure the baseline.
 2. **Weeks 5–12 (double down):** Keep whatever format drives clicks-to-signup. Add X kit-culture
    replies daily. Start LinkedIn build posts.
-3. **When sharing ships:** Re-run this strategy. Public vault links become the growth loop
-   (collectors posting their own vaults), and that changes every channel.
+3. **Sharing has shipped (2026-10-19) — re-run this strategy.** Public vault links are now the
+   growth loop: collectors posting their own vault, each link carrying a preview card with their
+   name and totals, and a "create your own vault" call to action on every vault page.
 4. **When payments open:** One launch campaign (`campaign-and-launch-planning`). Until then, Pro
    is only ever "join the waiting list".
 

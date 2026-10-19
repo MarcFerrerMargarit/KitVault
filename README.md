@@ -60,6 +60,9 @@ Create a project at [supabase.com](https://supabase.com), then:
    - `008_profile_fields_and_plan_lock.sql` — **required, and a security fix**.
      Adds the profile fields, and stops users from editing their own `plan`
      (see [Who can change what](#who-can-change-what)).
+   - `009_public_vaults.sql` — **required for sharing**. Usernames, the public
+     switch, `public_vault()` and the storage policy for public photos (see
+     [Public vaults](#public-vaults)).
 3. **Authentication → URL Configuration** → set the Site URL to
    `http://localhost:3000` and add `http://localhost:3000/**` to the redirect
    allow-list. The wildcard matters: password-reset links come back as
@@ -226,6 +229,7 @@ constraint on this product, conversion is.
 | `/auth/callback`     | Exchanges the Supabase confirmation code for a session            |
 | `/collection`        | The collection — server-rendered from Postgres; auth-protected    |
 | `/profile`           | Name, photo, favourite team, bio, stats and account actions; auth-protected |
+| `/u/[username]`      | A public vault, when its owner has switched it on; 404 otherwise     |
 | `POST /api/identify` | Gemini Vision identification (auth required, 10 MB image limit)   |
 | `POST /api/support`  | Records a help-form message and emails it on (auth required)      |
 | `GET /api/export`    | Everything held about the user, as a JSON download (auth required) |
@@ -569,6 +573,51 @@ exist. When public collection pages ship, this is what they will show.
 - **Change password** links to `/update-password`, which works for a signed-in
   user as well as after a recovery link.
 
+## Public vaults
+
+A collector can share their collection at `kitvault.dev/u/<username>`. It is
+**off by default**: nothing becomes visible until the owner picks a username
+and switches **Public vault** on in their profile, and switching it off hides
+it again at once.
+
+**What a visitor sees:** the owner's name, photo, bio and favourite team; every
+shirt with its photos and details; the totals; the grid and the map, with the
+same click-a-country filter as the private collection. **What they never see:**
+the email address, shirt notes (they can be personal — a price, who gave it)
+and anything from the AI. A visitor's detail view is the same modal with the
+edit, delete and AI sections left out.
+
+**How it is served without opening the tables.** RLS on `profiles` and
+`shirts` is unchanged and owner-only. A visitor reaches a vault only through
+`public_vault(username)`, a `security definer` function that returns the safe
+columns of a public vault and `null` for a private or unknown one — the same
+`null`, so the page cannot be used to learn which private usernames exist. One
+narrow, auditable door instead of anonymous policies on every table.
+
+Photos need one more piece: the page signs their URLs with whatever session the
+visitor has, and a storage policy lets anyone read the folder of an owner whose
+vault is public (asked through `vault_is_public()`, since a visitor cannot read
+`profiles`). That also means anyone can list that folder while it is public —
+which holds nothing beyond what the vault shows. Turning a vault off stops new
+links immediately; links already loaded expire within the hour.
+
+**Not in search engines.** Pages carry `noindex`: owners opted into sharing a
+link, not necessarily into being found. That is a one-line change in
+`app/u/[username]/page.tsx` if it should ever change — and a privacy-policy
+change with it.
+
+**The growth loop.** Every vault page keeps "Create your own vault — free" on
+screen and ends with a pitch, and every link carries a preview card
+(`opengraph-image.tsx`) with the owner's name, totals and latest shirts, drawn
+in the app's colours. The card is rendered by Satori, which needs
+`display: flex` on every element with more than one child, text included.
+
+Usernames are 3–24 characters of `a-z 0-9 _ -`, stored lowercase, unique, with
+a list of reserved words (routes and anything that would impersonate the app).
+The rules exist twice on purpose — in `lib/profile.ts` so the form can explain
+a refusal, and as CHECK constraints in migration 009, which are the ones that
+hold.
+
 ## Exporting your data
 
 **Download my data**, in the same menu, is the other half of the GDPR pair:
@@ -871,6 +920,7 @@ app/
   api/export/route.ts      # GDPR data export as a JSON download
   privacy/, terms/         # Legal pages, rendered from lib/legal
   profile/                 # Profile page and its server actions
+  u/[username]/            # Public vault page and its link-preview image
   layout.tsx               # Fonts, metadata, Vercel Analytics
   icon.svg                 # Browser tab icon — the K mark, drawn as paths
   apple-icon.png           # 180px iOS home-screen icon
@@ -895,7 +945,8 @@ components/
   DeleteAccountDialog.tsx  # GDPR account deletion, confirmed by email
   SupportDialog.tsx        # The help / feedback form
   legal/LegalDocument.tsx  # Shared layout for the privacy policy and terms
-  profile/                 # ProfileForm (photo + fields), AccountSection
+  profile/                 # ProfileForm, SharingSection, AccountSection
+  public/PublicVault.tsx   # A shared vault, read-only, with the signup pitch
   PlanBadge.tsx            # Free/Pro chip in the header; free links to /upgrade
   UpgradeInterest.tsx      # Joins the waiting list
   auth/AuthForm.tsx        # Shared login / signup form
@@ -910,7 +961,8 @@ lib/
   image.ts                 # Browser-side downscaling + thumbnail paths
   plans.ts                 # Public plan catalogue for the pricing table
   legal/                   # Privacy policy + terms text, and the operator facts they need
-  profile.ts               # Profile reader, field limits, initials
+  profile.ts               # Profile reader, field limits, username rules
+  public-vault.ts          # Reads a public vault through public_vault()
   world-map.ts             # Projects the country outlines (server only)
   country-match.ts         # Free-text country → map country
   types.ts                 # Domain types
@@ -991,10 +1043,12 @@ Tokens live in `app/globals.css` under `@theme` (e.g. `bg-bg`, `text-accent`,
 - ✅ **Phase 3.10** — Identification v2: evidence-first prompt, alternative
   seasons, reuse of the user's own names, and per-model accuracy tracking (see
   [How identification works](#how-identification-works))
+- ✅ **Phase 3.11** — Profiles and public vaults: name, photo, bio, opt-in
+  sharing by link with preview cards (see [Public vaults](#public-vaults))
 - 🔜 **Phase 4** — Automatic reference-image enrichment
 - 🔜 **Phase 5** — Model improvement from correction feedback (`ai_corrections`
   is already collecting the data)
-- 🔜 **Phase 6** — Social profiles, collection stats, PWA
+- 🔜 **Phase 6** — Discovery (if vaults become findable), PWA
 
 ### Before charging anyone
 

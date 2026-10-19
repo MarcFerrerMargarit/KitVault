@@ -30,7 +30,7 @@ and `platforms/`.
   2. Cataloguing should take seconds per shirt, not an evening with a spreadsheet.
   3. Your collection is yours. Private by default, deletable completely, nothing sold.
 - **Won't say:** that it values shirts, authenticates shirts or spots fakes. It does none of
-  these. It also won't say sharing is live (see Guardrails).
+  these. It won't overstate sharing either (see Guardrails).
 
 ## Audience (full version: `audience.md`)
 ### Segment 1 — The serious collector ⭐ primary
@@ -125,10 +125,11 @@ and `platforms/`.
   - If a `design-and-templates` brand kit is created later, it becomes the source of truth.
 
 ## Guardrails
-- **Sharing is not built yet.** There are no public collection pages or share links in the
-  product. The landing page no longer promises it either (since 2026-10-19 its third feature is
-  the collection map). Don't promise sharing on social until it ships. Talk about showing your
-  collection via screenshots of your vault and map.
+- **Sharing is link-only and opt-in** (shipped 2026-10-19). A collector can switch on a public
+  vault at `kitvault.dev/u/<username>`; it is off by default, not in search engines, and never
+  shows email or shirt notes. Say "share your vault with a link". Don't say "public profile",
+  "social network", "discover other collectors" or "followers" — none of that exists, and there
+  is no directory or search of vaults.
 - **Club IP:** Photographing real shirts the founder or collectors own is fine. Never use club
   crests or logos as KitVault branding, imply a club partnership, or generate a club kit with
   AI.

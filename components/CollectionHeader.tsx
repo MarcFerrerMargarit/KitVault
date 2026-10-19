@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   Download,
+  Globe2,
   LifeBuoy,
   LogOut,
   Sparkles,
@@ -23,7 +24,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/components/I18nProvider";
-import { initialsFor } from "@/lib/profile";
+import { initialsFor, vaultPath } from "@/lib/profile";
 
 interface CollectionHeaderProps {
   /** Email of the signed-in user. */
@@ -34,6 +35,8 @@ interface CollectionHeaderProps {
   displayName?: string | null;
   /** Signed URL of the profile photo, if there is one. */
   avatarUrl?: string | null;
+  /** Set when the vault is public, to link to it from the menu. */
+  publicUsername?: string | null;
 }
 
 /** Top bar for the collection: brand + account menu with logout. */
@@ -42,6 +45,7 @@ export function CollectionHeader({
   plan,
   displayName,
   avatarUrl,
+  publicUsername,
 }: CollectionHeaderProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -104,6 +108,14 @@ export function CollectionHeader({
               <User className="h-4 w-4" />
               {t.account.profile}
             </DropdownMenuItem>
+            {publicUsername && (
+              <DropdownMenuItem
+                onClick={() => window.open(vaultPath(publicUsername), "_blank")}
+              >
+                <Globe2 className="h-4 w-4" />
+                {t.account.viewPublicVault}
+              </DropdownMenuItem>
+            )}
             {plan === "free" && (
               <DropdownMenuItem onClick={() => router.push("/upgrade")}>
                 <Sparkles className="h-4 w-4" />
