@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
 import {
   fetchQuota,
@@ -7,6 +7,14 @@ import {
   type QuotaDenialReason,
 } from "@/lib/quota";
 import { VERSIONS } from "@/lib/mock-data";
+import {
+  PROMPT_VERSION,
+  RESPONSE_SCHEMA,
+  buildPrompt,
+  cleanAlternatives,
+  cleanEvidence,
+  topDistinct,
+} from "@/lib/identify-prompt";
 import { fill } from "@/lib/i18n/format";
 import { getTranslations } from "@/lib/i18n/server";
 
@@ -32,6 +40,19 @@ export const maxDuration = 60;
  * comes from the response schema, not from a low temperature.
  */
 const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
+
+/**
+ * How hard the model thinks before answering. LOW is the cheapest and fastest;
+ * MEDIUM or HIGH may identify obscure kits better at a higher cost and latency.
+ * Overridable like the model, and stored with each prediction, so the trade
+ * can be measured from `ai_corrections` rather than guessed.
+ */
+const THINKING_LEVEL: ThinkingLevel = (() => {
+  const wanted = process.env.GEMINI_THINKING_LEVEL?.trim().toUpperCase();
+  return wanted === "MEDIUM" || wanted === "HIGH"
+    ? ThinkingLevel[wanted]
+    : ThinkingLevel.LOW;
+})();
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
 /** Row returned by the `consume_ai_credit()` Postgres function. */
@@ -105,21 +126,27 @@ export async function POST(request: Request) {
   }
 
   const usageId = credit.usage_id;
-  const base64 = Buffer.from(await image.arrayBuffer()).toString("base64");
 
-  const prompt = `You are an expert in identifying football (soccer) shirts.
-Analyse the shirt in the image and identify it as accurately as you can.
-Return:
-- team: the club or national team name.
-- season: format "YYYY-YY" (e.g. "2019-20"); best estimate.
-- version: one of Home, Away, Third or GK.
-- manufacturer: the exact brand (e.g. "Adidas", "Castore", "Meyba"…).
-- country: the country of the team (e.g. "Spain", "Brazil"…).
-- league: the exact league name (e.g. "LaLiga", "Championship", "Serie B").
-  Use an empty string "" if the team has no league (national teams, friendlies).
-- confidence: integer 0-100, your confidence in the team + season.
-Give your best real-world value for each field — do not restrict yourself to a
-fixed list. If unsure, still provide your best estimate.`;
+  // The user's existing names, so a new shirt reuses "FC Barcelona" rather
+  // than adding a "Barcelona" beside it — filters and the map count by exact
+  // spelling. Best effort: a failed read just means no hints.
+  const [base64, known] = await Promise.all([
+    image.arrayBuffer().then((buf) => Buffer.from(buf).toString("base64")),
+    supabase
+      .from("shirts")
+      .select("team, league, manufacturer")
+      .eq("user_id", user.id)
+      .limit(2000)
+      .then(({ data }) => ({
+        teams: topDistinct((data ?? []).map((r) => r.team as string)),
+        leagues: topDistinct((data ?? []).map((r) => r.league as string)),
+        manufacturers: topDistinct(
+          (data ?? []).map((r) => r.manufacturer as string),
+        ),
+      })),
+  ]);
+
+  const prompt = buildPrompt(known);
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -140,32 +167,9 @@ fixed list. If unsure, still provide your best estimate.`;
         },
       ],
       config: {
-        // Thinking bills as output and buys little here — the schema below
-        // already decides the shape of the answer — so keep it at the floor.
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        thinkingConfig: { thinkingLevel: THINKING_LEVEL },
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            team: { type: Type.STRING },
-            season: { type: Type.STRING },
-            // Only version is a closed set; the rest are free-form.
-            version: { type: Type.STRING, enum: VERSIONS as string[] },
-            manufacturer: { type: Type.STRING },
-            country: { type: Type.STRING },
-            league: { type: Type.STRING },
-            confidence: { type: Type.NUMBER },
-          },
-          required: [
-            "team",
-            "season",
-            "version",
-            "manufacturer",
-            "country",
-            "league",
-            "confidence",
-          ],
-        },
+        responseSchema: RESPONSE_SCHEMA,
       },
     });
 
@@ -200,20 +204,54 @@ fixed list. If unsure, still provide your best estimate.`;
       `[identify] model=${MODEL} tokens in=${usage?.promptTokenCount ?? "?"} out=${outputTokens ?? "?"} (thinking ${usage?.thoughtsTokenCount ?? 0}) total=${usage?.totalTokenCount ?? "?"}`,
     );
 
+    const team = String(parsed.team ?? "").trim();
+    const season = String(parsed.season ?? "").trim();
+    const version = VERSIONS.includes(
+      parsed.version as (typeof VERSIONS)[number],
+    )
+      ? (parsed.version as string)
+      : "Home";
+    const manufacturer = String(parsed.manufacturer ?? "").trim() || "Other";
+    const country = String(parsed.country ?? "").trim();
+    const league = String(parsed.league ?? "").trim();
+    const confidence = Math.max(
+      0,
+      Math.min(100, Math.round(Number(parsed.confidence) || 0)),
+    );
+    const alternativeSeasons = cleanAlternatives(
+      parsed.alternativeSeasons,
+      season,
+    );
+    const evidence = cleanEvidence(parsed.evidence);
+
     return NextResponse.json({
       quota: await fetchQuota(supabase),
-      team: String(parsed.team ?? "").trim(),
-      season: String(parsed.season ?? "").trim(),
-      version: VERSIONS.includes(parsed.version as (typeof VERSIONS)[number])
-        ? parsed.version
-        : "Home",
-      manufacturer: String(parsed.manufacturer ?? "").trim() || "Other",
-      country: String(parsed.country ?? "").trim(),
-      league: String(parsed.league ?? "").trim(),
-      confidence: Math.max(
-        0,
-        Math.min(100, Math.round(Number(parsed.confidence) || 0)),
-      ),
+      team,
+      season,
+      alternativeSeasons,
+      version,
+      manufacturer,
+      country,
+      league,
+      confidence,
+      // What gets stored in `ai_corrections.predicted` when the shirt is saved:
+      // the answer plus what produced it, so accuracy can be compared across
+      // models, prompt versions and thinking levels — and the evidence, so a
+      // wrong answer can be traced to what the model thought it saw.
+      prediction: {
+        team,
+        season,
+        alternativeSeasons,
+        version,
+        manufacturer,
+        country,
+        league,
+        confidence,
+        evidence,
+        model: MODEL,
+        promptVersion: PROMPT_VERSION,
+        thinkingLevel: THINKING_LEVEL,
+      },
       usage: {
         input: usage?.promptTokenCount ?? null,
         output: outputTokens,

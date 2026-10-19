@@ -77,6 +77,12 @@ export function AddShirtModal({
     string,
     unknown
   > | null>(null);
+  /**
+   * Every season the AI thought plausible, its first choice included, so the
+   * user can switch back after trying another. Seasons are where it is most
+   * often wrong: the same design is often worn for two seasons.
+   */
+  const [seasonOptions, setSeasonOptions] = React.useState<string[]>([]);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -90,6 +96,7 @@ export function AddShirtModal({
       setSaving(false);
       setError(null);
       setPrediction(null);
+      setSeasonOptions([]);
       if (editingShirt) {
         setStep("form");
         setAiConfidence(editingShirt.ai.confidence);
@@ -137,21 +144,34 @@ export function AddShirtModal({
         setAiConfidence(
           typeof json.confidence === "number" ? json.confidence : null,
         );
-        setPrediction({
-          team: json.team,
-          season: json.season,
-          version: json.version,
-          country: json.country,
-          league: json.league,
-          manufacturer: json.manufacturer,
-          confidence: json.confidence,
-        });
+        // The route returns the full record to store (answer, evidence, model,
+        // prompt version); fall back to the bare answer for an older server.
+        setPrediction(
+          json.prediction ?? {
+            team: json.team,
+            season: json.season,
+            version: json.version,
+            country: json.country,
+            league: json.league,
+            manufacturer: json.manufacturer,
+            confidence: json.confidence,
+          },
+        );
+        const alternatives: string[] = Array.isArray(json.alternativeSeasons)
+          ? json.alternativeSeasons
+          : [];
+        setSeasonOptions(
+          alternatives.length > 0 && json.season
+            ? [json.season, ...alternatives]
+            : [],
+        );
         setStep("form");
       } catch (e) {
         // Fall back to a blank form so the user can still add the shirt manually.
         setForm(EMPTY_FORM);
         setAiConfidence(null);
         setPrediction(null);
+        setSeasonOptions([]);
         setError(e instanceof Error ? e.message : t.addShirt.identifyFailed);
         setStep("form");
       }
@@ -405,6 +425,30 @@ export function AddShirtModal({
             </div>
 
             <ShirtFields value={form} onChange={update} />
+
+            {!isEditing && seasonOptions.length > 1 && (
+              <div className="-mt-1 flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-muted">{t.addShirt.seasonOptions}</span>
+                {seasonOptions.map((season) => {
+                  const active = form.season === season;
+                  return (
+                    <button
+                      key={season}
+                      type="button"
+                      onClick={() => update("season", season)}
+                      aria-pressed={active}
+                      className={
+                        active
+                          ? "cursor-pointer rounded-[3px] border border-accent bg-accent-soft px-2 py-1 font-semibold text-accent"
+                          : "cursor-pointer rounded-[3px] border border-border-strong px-2 py-1 text-ink transition-colors hover:border-muted-2 hover:bg-surface-2"
+                      }
+                    >
+                      {season}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {!isEditing && aiConfidence !== null && (
               <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/25 bg-accent-soft p-3 text-xs leading-relaxed text-accent">

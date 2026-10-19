@@ -246,6 +246,7 @@ export const en = {
     changePhoto: "Change photo",
     addPhoto: "Add photo",
     photoHint: "PNG or JPG, up to 10MB.",
+    seasonOptions: "Could also be:",
     aiSuggested:
       "AI suggested these details ({confidence}% confidence) — correct anything that's wrong to help improve future identifications.",
     cancel: "Cancel",

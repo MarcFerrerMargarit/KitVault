@@ -209,7 +209,9 @@ export function BulkJobProvider({
               };
               item.confidence =
                 typeof json.confidence === "number" ? json.confidence : null;
-              item.prediction = {
+              // Same record the single-shirt flow stores: answer, evidence,
+              // model and prompt version, so batches count toward accuracy too.
+              item.prediction = json.prediction ?? {
                 team: json.team,
                 season: json.season,
                 version: json.version,

@@ -92,6 +92,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API | yes (safe)           |
 | `GEMINI_API_KEY`                | Google AI Studio                  | **no — server only** |
 | `GEMINI_MODEL`                  | Optional; defaults to `gemini-3.8-flash` | **no — server only** |
+| `GEMINI_THINKING_LEVEL`         | Optional; `LOW` (default), `MEDIUM` or `HIGH` | **no — server only** |
 | `RESEND_API_KEY`                | Resend → API Keys                 | **no — server only** |
 | `SUPPORT_EMAIL`                 | Wherever feedback should land     | **no — server only** |
 | `SUPPORT_FROM`                  | Optional; an address at a domain verified in Resend | **no — server only** |
@@ -236,9 +237,12 @@ constraint on this product, conversion is.
 2. The file is posted to `/api/identify`, which claims an [AI credit](#ai-quota)
    and sends the photo to `gemini-3.8-flash` with a JSON response schema,
    returning team, season, version, manufacturer, country, league and a 0-100
-   confidence. If the call fails or the quota is spent, the form opens blank so
-   the shirt can still be added by hand.
-3. The user reviews or corrects the fields.
+   confidence — plus up to two alternative seasons when the evidence does not
+   settle it (see [How identification works](#how-identification-works)). If
+   the call fails or the quota is spent, the form opens blank so the shirt can
+   still be added by hand.
+3. The user reviews or corrects the fields. Alternative seasons appear as
+   one-click choices under the form.
 4. On save, the photo is uploaded to the private `shirts` bucket under
    `<user-id>/<uuid>.<ext>`, and a Server Action inserts the row. The original
    prediction and the corrected values are stored in `ai_corrections` — training
@@ -687,10 +691,67 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
   | grep -o '"name": "models/[^"]*"' | sed 's/.*models\///;s/"//' | sort
 ```
 
-`ai_corrections` already stores what the model predicted against what the user
-saved, which is an accuracy measurement on the real task. It does not yet record
-_which_ model made the prediction — add that column before running a comparison
-that is supposed to mean something.
+`ai_corrections` stores what the model predicted against what the user saved —
+an accuracy measurement on the real task — and each prediction records the
+model, prompt version and thinking level that produced it. See
+[Measuring accuracy](#measuring-accuracy).
+
+### How identification works
+
+The prompt and the response schema live in `lib/identify-prompt.ts`. Three
+choices in them do most of the work:
+
+- **Evidence before answer.** The model first writes down what it can actually
+  see — crest, sponsor as printed, manufacturer logo, badges and patches, any
+  other text such as a tag's product code — and only then answers. The schema's
+  `propertyOrdering` puts `evidence` first, so the answer is generated after it.
+  Seasons are where identification goes wrong, and seasons are pinned by exactly
+  these small details, which a model asked straight for "the season" skips past.
+  The prompt forbids inventing a sponsor or badge it cannot read.
+- **Alternative seasons.** The same design is often worn for two seasons. Rather
+  than force one guess, the model may name up to two other plausible seasons,
+  shown to the user as one-click choices.
+- **The user's own spellings.** The prompt lists the teams, leagues and
+  manufacturers already in the user's collection (up to 150 each, most frequent
+  first) and asks the model to reuse them, so a new shirt lands as "FC
+  Barcelona" beside the others instead of a fresh "Barcelona". Filters and the
+  map count by exact spelling, so this keeps them whole.
+
+Bump `PROMPT_VERSION` whenever the prompt or schema changes in a way that could
+move accuracy — it is stored with every prediction.
+
+`GEMINI_THINKING_LEVEL` (`LOW` by default) trades cost and speed for how hard the
+model thinks. Whether `MEDIUM` identifies obscure kits enough better to be worth
+it is an empirical question; the query below answers it.
+
+### Measuring accuracy
+
+Per model, prompt version and thinking level: how often each field the AI
+proposed survived the user's review, and how often the right season was among
+the alternatives when the main guess missed. Rows from before prompt version 2
+carry no model and show as empty.
+
+```sql
+select predicted->>'model'          as model,
+       predicted->>'promptVersion'  as prompt,
+       predicted->>'thinkingLevel'  as thinking,
+       count(*)                     as shirts,
+       round(100.0 * avg((lower(predicted->>'team') = lower(corrected->>'team'))::int))  as team_pct,
+       round(100.0 * avg((predicted->>'season' = corrected->>'season')::int))           as season_pct,
+       round(100.0 * avg((predicted->'alternativeSeasons' ? (corrected->>'season'))::int)) as season_in_alts_pct,
+       round(100.0 * avg((predicted->>'version' = corrected->>'version')::int))         as version_pct,
+       round(100.0 * avg((lower(predicted->>'manufacturer') = lower(corrected->>'manufacturer'))::int)) as maker_pct
+  from public.ai_corrections
+ group by 1, 2, 3
+ order by 1, 2, 3;
+```
+
+Two caveats. A user who does not bother to fix a wrong field counts as a hit, so
+these are upper bounds. And a few dozen shirts per row is the least worth
+reading; below that, differences are noise.
+
+When a guess was wrong, `predicted->'evidence'` shows what the model thought it
+saw — usually the quickest way to tell a bad photo from a bad answer.
 
 ### Cost per identification
 
@@ -878,6 +939,9 @@ Tokens live in `app/globals.css` under `@theme` (e.g. `bg-bg`, `text-accent`,
 - ✅ **Phase 3.9** — Shipped to testers: own domain, real transactional email on
   a verified domain, branded templates, an in-app
   [help form](#help-and-feedback) and [page-view analytics](#analytics)
+- ✅ **Phase 3.10** — Identification v2: evidence-first prompt, alternative
+  seasons, reuse of the user's own names, and per-model accuracy tracking (see
+  [How identification works](#how-identification-works))
 - 🔜 **Phase 4** — Automatic reference-image enrichment
 - 🔜 **Phase 5** — Model improvement from correction feedback (`ai_corrections`
   is already collecting the data)

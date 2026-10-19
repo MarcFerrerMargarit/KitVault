@@ -55,7 +55,7 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
           [
             "Tu cuenta: correo electrónico, fecha de alta y el plan en el que estás. La contraseña la guarda nuestro proveedor de autenticación cifrada; nosotros nunca la vemos.",
             "Tu colección: los datos de cada camiseta (equipo, temporada, versión, país, liga, marca, notas) y sus fotos. Las fotos se reducen en tu propio navegador antes de subirlas, y al hacerlo se eliminan sus metadatos, incluida la ubicación GPS que muchos móviles guardan en la imagen.",
-            "La identificación con IA: lo que la IA propuso para cada foto y lo que tú guardaste finalmente, y un registro de cada identificación (fecha, modelo usado y tamaño de la petición) que usamos para aplicar los límites diarios y controlar el coste.",
+            "La identificación con IA: lo que la IA propuso para cada foto, los detalles que leyó en ella (escudo, patrocinador, parches o textos visibles), lo que tú guardaste finalmente, y un registro de cada identificación (fecha, modelo usado y tamaño de la petición) que usamos para aplicar los límites diarios y controlar el coste.",
             "Los mensajes que nos envías desde el formulario de ayuda, junto con la página desde la que escribiste y el idioma de la interfaz.",
             "Si te apuntas a la lista de espera del plan Pro, ese hecho y la fecha.",
             "Datos técnicos: la cookie de sesión que te mantiene identificado, una cookie que recuerda tu idioma, y los registros de servidor habituales (dirección IP, fecha y página solicitada) que generan nuestros proveedores de alojamiento.",
@@ -158,7 +158,7 @@ export const PRIVACY: Record<Locale, LegalDoc> = {
           [
             "Your account: email address, sign-up date and the plan you are on. Your password is kept, hashed, by our authentication provider; we never see it.",
             "Your collection: the details of each shirt (team, season, version, country, league, manufacturer, notes) and its photos. Photos are downscaled in your own browser before upload, which also strips their metadata — including the GPS location many phones write into the image.",
-            "AI identification: what the AI suggested for each photo and what you finally saved, plus a record of each identification (time, model used and request size) that we use to apply the daily limits and keep the cost under control.",
+            "AI identification: what the AI suggested for each photo, the details it read from it (crest, sponsor, patches or visible text), what you finally saved, and a record of each identification (time, model used and request size) that we use to apply the daily limits and keep the cost under control.",
             "Messages you send through the help form, with the page you wrote from and the interface language.",
             "If you join the Pro waiting list, that fact and the date.",
             "Technical data: the session cookie that keeps you signed in, a cookie that remembers your language, and the usual server logs (IP address, time and page requested) produced by our hosting providers.",

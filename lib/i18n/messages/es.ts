@@ -248,6 +248,7 @@ export const es: Messages = {
     changePhoto: "Cambiar foto",
     addPhoto: "Añadir foto",
     photoHint: "PNG o JPG, hasta 10MB.",
+    seasonOptions: "También podría ser:",
     aiSuggested:
       "La IA ha propuesto estos datos ({confidence}% de confianza) — corrige lo que esté mal y ayudarás a mejorar futuras identificaciones.",
     cancel: "Cancelar",
