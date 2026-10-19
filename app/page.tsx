@@ -209,9 +209,19 @@ export default async function LandingPage() {
             <Brand />
             <LocaleSwitcher />
           </div>
-          <p className="text-xs text-muted-2">
-            © {new Date().getFullYear()} KitVault. {t.footer.tagline}
-          </p>
+          <div className="flex flex-col items-center gap-2 sm:items-start">
+            <p className="text-xs text-muted-2">
+              © {new Date().getFullYear()} KitVault. {t.footer.tagline}
+            </p>
+            <nav className="flex gap-4 text-xs text-muted">
+              <Link href="/privacy" className="transition-colors hover:text-ink">
+                {t.footer.privacy}
+              </Link>
+              <Link href="/terms" className="transition-colors hover:text-ink">
+                {t.footer.terms}
+              </Link>
+            </nav>
+          </div>
           <a
             href={GITHUB_URL}
             target="_blank"

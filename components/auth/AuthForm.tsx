@@ -198,6 +198,20 @@ export function AuthForm({ mode }: AuthFormProps) {
         {copy.cta}
       </Button>
 
+      {mode === "signup" && (
+        <p className="text-center text-xs leading-relaxed text-muted-2">
+          {t.auth.legalNotice.before}
+          <Link href="/terms" className="text-muted underline hover:text-ink">
+            {t.auth.legalNotice.terms}
+          </Link>
+          {t.auth.legalNotice.middle}
+          <Link href="/privacy" className="text-muted underline hover:text-ink">
+            {t.auth.legalNotice.privacy}
+          </Link>
+          {t.auth.legalNotice.after}
+        </p>
+      )}
+
       <p className="text-center text-sm text-muted">
         {copy.altText}{" "}
         <Link

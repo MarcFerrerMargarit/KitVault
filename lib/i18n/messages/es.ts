@@ -77,6 +77,15 @@ export const es: Messages = {
     tagline: "Un proyecto para coleccionistas de camisetas de fútbol.",
     github: "Ver en GitHub",
     language: "Idioma",
+    privacy: "Privacidad",
+    terms: "Términos",
+  },
+
+  legal: {
+    updated: "Última actualización: {date}",
+    back: "Volver a KitVault",
+    privacy: "Política de privacidad",
+    terms: "Términos de uso",
   },
 
   auth: {
@@ -93,6 +102,13 @@ export const es: Messages = {
       cta: "Crear cuenta",
       altText: "¿Ya tienes cuenta?",
       altLink: "Entrar",
+    },
+    legalNotice: {
+      before: "Al crear una cuenta confirmas que tienes al menos 14 años y aceptas los ",
+      terms: "Términos de uso",
+      middle: " y la ",
+      privacy: "Política de privacidad",
+      after: ".",
     },
     email: "Correo",
     emailPlaceholder: "tu@ejemplo.com",
@@ -340,6 +356,7 @@ export const es: Messages = {
     planSuffix: "plan",
     upgrade: "Pasar a Pro",
     logout: "Cerrar sesión",
+    exportData: "Descargar mis datos",
     deleteAccount: "Borrar cuenta",
     planFreeTooltip: "Estás en el plan gratuito — mira qué añade Pro",
     planProTooltip: "Estás en el plan {plan}",
@@ -395,6 +412,7 @@ export const es: Messages = {
     supportRateLimit:
       "Ya nos has escrito unas cuantas veces. Inténtalo dentro de una hora.",
     supportFailed: "No se ha podido enviar tu mensaje. Prueba en un momento.",
+    exportFailed: "No se han podido preparar tus datos. Prueba en un momento.",
   },
 
   support: {

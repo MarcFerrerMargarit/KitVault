@@ -78,6 +78,15 @@ export const en = {
     tagline: "A prototype for football shirt collectors.",
     github: "View on GitHub",
     language: "Language",
+    privacy: "Privacy",
+    terms: "Terms",
+  },
+
+  legal: {
+    updated: "Last updated {date}",
+    back: "Back to KitVault",
+    privacy: "Privacy policy",
+    terms: "Terms of use",
   },
 
   auth: {
@@ -94,6 +103,14 @@ export const en = {
       cta: "Sign up",
       altText: "Already have an account?",
       altLink: "Log in",
+    },
+    // Rendered around two links, hence the pieces.
+    legalNotice: {
+      before: "By creating an account you confirm you are 14 or older and accept the ",
+      terms: "Terms of use",
+      middle: " and the ",
+      privacy: "Privacy policy",
+      after: ".",
     },
     email: "Email",
     emailPlaceholder: "you@example.com",
@@ -328,6 +345,7 @@ export const en = {
     planSuffix: "plan",
     upgrade: "Upgrade to Pro",
     logout: "Log out",
+    exportData: "Download my data",
     deleteAccount: "Delete account",
     planFreeTooltip: "You are on the free plan — see what Pro adds",
     planProTooltip: "You are on the {plan} plan",
@@ -382,6 +400,7 @@ export const en = {
     supportRateLimit:
       "You have sent us a few messages already. Try again in an hour.",
     supportFailed: "Could not send your message. Try again in a moment.",
+    exportFailed: "Could not prepare your data. Try again in a moment.",
   },
 
   support: {

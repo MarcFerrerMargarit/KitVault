@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LifeBuoy, LogOut, Sparkles, Trash2 } from "lucide-react";
+import { Download, LifeBuoy, LogOut, Sparkles, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Brand } from "@/components/Brand";
 import { AiQuotaBadge } from "@/components/AiQuotaBadge";
@@ -76,6 +76,16 @@ export function CollectionHeader({ email, plan }: CollectionHeaderProps) {
                 {t.account.upgrade}
               </DropdownMenuItem>
             )}
+            {/* A plain navigation: the route answers with an attachment, so the
+                browser downloads it and the page stays where it is. */}
+            <DropdownMenuItem
+              onClick={() => {
+                window.location.href = "/api/export";
+              }}
+            >
+              <Download className="h-4 w-4" />
+              {t.account.exportData}
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
               {t.account.logout}

@@ -223,6 +223,8 @@ constraint on this product, conversion is.
 | `/collection`        | The collection — server-rendered from Postgres; auth-protected    |
 | `POST /api/identify` | Gemini Vision identification (auth required, 10 MB image limit)   |
 | `POST /api/support`  | Records a help-form message and emails it on (auth required)      |
+| `GET /api/export`    | Everything held about the user, as a JSON download (auth required) |
+| `/privacy`, `/terms` | Privacy policy and terms of use, in both languages                |
 | `GET /api/world-map` | Projected country outlines for the map view (static, cached)      |
 
 `middleware.ts` refreshes the Supabase session on every request, gates
@@ -532,6 +534,43 @@ It is a `security definer` function rather than a call with the service_role
 key deliberately: the app never has to hold a credential that bypasses RLS
 entirely, and the function can only ever delete its own caller.
 
+## Exporting your data
+
+**Download my data**, in the same menu, is the other half of the GDPR pair:
+erasure above, portability here. `GET /api/export` returns one JSON file with
+the account, every shirt, the AI corrections, the identification log, help
+messages and the waiting-list entry — every table that holds something about
+the user.
+
+Photos are included as signed links rather than embedded: a collection can run
+to hundreds of megabytes, and links keep the export instant. They last a week,
+long enough to fetch them and short enough that a forwarded file does not leave
+a collection readable for good. The response is `no-store`, so no shared cache
+keeps a copy.
+
+**When a migration adds a table that stores something about a user, add it to
+the export, to the cascade in `delete_own_account()`, and to the privacy
+policy.** Those three lists have to stay in step.
+
+## Legal pages
+
+`/privacy` and `/terms` render from `lib/legal/documents.ts`, kept out of the
+message dictionaries because they are long and change on a legal rather than a
+product rhythm. The signup form links both and asks the user to confirm they
+are 14 or older, the Spanish age of digital consent.
+
+**The facts the documents rest on live in `lib/legal/config.ts`, and some are
+placeholders**: who runs the service, tax ID, postal address, contact email and
+the Supabase region. They render in brackets until filled in, on purpose — a
+visible gap is fixable, an invented tax number is not. Fill them in before
+opening the app to strangers; Spanish law (LSSI art. 10) requires a service's
+operator to be identifiable, and the GDPR requires the controller to be named.
+
+Every claim in them is about how the app actually behaves — what is stored, who
+processes it, how deletion works. Change the documents, and `LEGAL.updated`,
+whenever any of that changes. They are a careful draft, not legal advice: have
+someone qualified read them before charging anyone.
+
 ## AI quota
 
 Every account shares one `GEMINI_API_KEY`, and **Gemini rate limits are applied
@@ -735,6 +774,8 @@ app/
   collection/actions.ts    # Server Actions: create / update / delete shirt
   api/identify/route.ts    # Gemini Vision identification endpoint
   api/support/route.ts     # Help form: records the message, then emails it on
+  api/export/route.ts      # GDPR data export as a JSON download
+  privacy/, terms/         # Legal pages, rendered from lib/legal
   layout.tsx               # Fonts, metadata, Vercel Analytics
   icon.svg                 # Browser tab icon — the K mark, drawn as paths
   apple-icon.png           # 180px iOS home-screen icon
@@ -758,6 +799,7 @@ components/
   ShirtFields.tsx          # The editable shirt fields, shared by both flows
   DeleteAccountDialog.tsx  # GDPR account deletion, confirmed by email
   SupportDialog.tsx        # The help / feedback form
+  legal/LegalDocument.tsx  # Shared layout for the privacy policy and terms
   PlanBadge.tsx            # Free/Pro chip in the header; free links to /upgrade
   UpgradeInterest.tsx      # Joins the waiting list
   auth/AuthForm.tsx        # Shared login / signup form
@@ -771,6 +813,7 @@ lib/
   quota.ts                 # Quota types, RPC reader, refusal messages
   image.ts                 # Browser-side downscaling + thumbnail paths
   plans.ts                 # Public plan catalogue for the pricing table
+  legal/                   # Privacy policy + terms text, and the operator facts they need
   world-map.ts             # Projects the country outlines (server only)
   country-match.ts         # Free-text country → map country
   types.ts                 # Domain types
@@ -858,11 +901,12 @@ Tokens live in `app/globals.css` under `@theme` (e.g. `bg-bg`, `text-accent`,
 - **Vercel Hobby forbids commercial use**, and Supabase's free tier pauses a
   project after a week idle — both need their paid plans. See
   [Deployment](#deployment).
-- **Terms, privacy policy and legal entity.** The account deletion above covers
-  the right to erasure; portability still needs an export button. The policy has
-  to name the sub-processors: Google (photographs sent for identification),
-  Supabase (accounts and image storage, with the region), Resend (email), Vercel
-  (hosting and analytics), and whoever ends up taking the money.
+- **Legal identity and review.** The privacy policy, terms and data export
+  exist (see [Legal pages](#legal-pages)), but the operator's details in
+  `lib/legal/config.ts` are placeholders, and the terms deliberately leave out
+  payment, renewal and cancellation. Fill in the first, write the second when
+  payments open, add the payment provider to the processor list, and have both
+  documents reviewed.
 
 ### Known things to watch
 
